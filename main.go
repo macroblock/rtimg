@@ -24,7 +24,7 @@ var errors []string    // Store errors in array.
 var args = os.Args[1:] // Convert passed arguments into array.
 var length = len(args) // Store the amount of arguments in global space.
 var re1 = regexp.MustCompile(`^\w+_\d{4}__(?:sd|hd|3d)(?:_\w+)*_(190-230|350-500|525-300|780-100|810-498|270-390)\.poster\.jpg$`)
-var re2 = regexp.MustCompile(`^(?:sd|hd)_\d{4}(_3d)*(?:_\w+)+__(?:\w+_)*poster(190x230|350x500|525x300|780x100|810x498|270x390)\.jpg$`)
+var re2 = regexp.MustCompile(`^(?:sd|hd)_\d{4}(?:_3d)?(?:_\w+)+__(?:\w+_)*poster(190x230|350x500|525x300|780x100|810x498|270x390)\.jpg$`)
 var wg sync.WaitGroup
 var m sync.Mutex
 
