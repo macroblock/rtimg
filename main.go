@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,13 +32,14 @@ var lossy bool
 
 var re1 = regexp.MustCompile(`^\w+_\d{4}__(?:sd|hd|3d)(?:_\w+)*_(190-230|350-500|525-300|780-100|810-498|270-390)\.poster\.(?:jpg|png)$`)
 var re2 = regexp.MustCompile(`^(?:sd|hd)_\d{4}(?:_3d)?(?:_\w+)+__(?:\w+_)*poster(190x230|350x500|525x300|780x100|810x498|270x390)\.(?:jpg|png)$`)
+var reErr = regexp.MustCompile(`(Error:.*)`)
 var wg sync.WaitGroup
 var m sync.Mutex
 
 func main() {
 	// Parse input flags.
 	flag.StringVar(&format, "f", "all", "Format of the input files to compress (jpg|png|all)")
-	flag.IntVar(&threads, "t", runtime.NumCPU(), "Number of threads")
+	flag.IntVar(&threads, "t", 4, "Number of threads")
 	flag.BoolVar(&lossy, "l", false, "Lossy pgnquant compression for PNG files")
 	flag.Usage = func() {
 		ansi.Println("Usage: rtimg [options] [file1 file2 ...]")
@@ -251,7 +251,11 @@ func savePNG(filePath string) {
 				return
 			}
 		}
-	} else {
+		return
+	}
+	// Use optipng on input file.
+	err = optiPNG(filePath, filePath+"####.png")
+	if err != nil {
 		// Run ffmpeg to encode file to PNG.
 		stdoutStderr, err := exec.Command("ffmpeg",
 			"-i", filePath,
@@ -265,6 +269,12 @@ func savePNG(filePath string) {
 			printError(fileName, fmt.Sprintf("%s", stdoutStderr))
 			return
 		}
+		if err != nil {
+			printError(fileName, err.Error())
+			return
+		}
+		// Try using optipng again.
+		err = optiPNG(filePath+"####.png", filePath+"####.png")
 		if err != nil {
 			printError(fileName, err.Error())
 			return
@@ -314,6 +324,25 @@ func pngQuant(filePath string, output string) error {
 	).CombinedOutput()
 	if len(stdoutStderr) > 0 {
 		return fmt.Errorf("%s", stdoutStderr)
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// optiPNG reduces the file size of input PNG file with lossless compression.
+func optiPNG(filePath string, output string) error {
+	// Run pngquant to reduce the file size of input PNG file with lossy compression.
+	stdoutStderr, err := exec.Command("optipng",
+		"--strip", "all",
+		"--out", output,
+		"--", filePath,
+	).CombinedOutput()
+	if len(stdoutStderr) > 0 {
+		if reErr.MatchString(string(stdoutStderr)) {
+			return errors.New(reErr.ReplaceAllString(string(stdoutStderr), "$1"))
+		}
 	}
 	if err != nil {
 		return err
