@@ -38,7 +38,7 @@ var m sync.Mutex
 
 func main() {
 	// Parse input flags.
-	flag.StringVar(&format, "f", "jpg", "Format of the input files to compress (jpg|png|all)")
+	flag.StringVar(&format, "f", "all", "Format of the input files to compress (jpg|png|all)")
 	flag.IntVar(&threads, "t", runtime.NumCPU(), "Number of threads")
 	flag.BoolVar(&lossy, "l", false, "Lossy pgnquant compression for PNG files")
 	flag.Usage = func() {
