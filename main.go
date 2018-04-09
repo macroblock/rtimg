@@ -102,7 +102,7 @@ func worker(c chan string) {
 		err := checkFile(filePath)
 		if err != nil {
 			printError(fileName, err.Error())
-			return
+			continue
 		}
 		if ext == ".jpg" {
 			saveJPG(filePath)
