@@ -30,8 +30,8 @@ var format string
 var threads int
 var lossy bool
 
-var re1 = regexp.MustCompile(`^\w+_\d{4}__(?:sd|hd|3d)(?:_\w+)*_(190-230|350-500|525-300|780-100|810-498|270-390)\.poster\.(?:jpg|png)$`)
-var re2 = regexp.MustCompile(`^(?:sd|hd)_\d{4}(?:_3d)?(?:_\w+)+__(?:\w+_)*poster(190x230|350x500|525x300|780x100|810x498|270x390)\.(?:jpg|png)$`)
+var re1 = regexp.MustCompile(`^\w+_\d{4}__(?:sd|hd|3d)(?:_\w+)*_(190-230|350-500|525-300|780-100|810-498|270-390|1620-996|503-726)\.poster\.(?:jpg|png)$`)
+var re2 = regexp.MustCompile(`^(?:sd|hd)_\d{4}(?:_3d)?(?:_\w+)+__(?:\w+_)*poster(190x230|350x500|525x300|780x100|810x498|270x390|1620x996|503x726)\.(?:jpg|png)$`)
 var reErr = regexp.MustCompile(`(Error:.*)`)
 var wg sync.WaitGroup
 var m sync.Mutex
