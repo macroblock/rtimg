@@ -29,9 +29,15 @@ var length int           // Store the amount of input files in global space.
 var format string
 var threads int
 var lossy bool
+var gazprom bool
+var maxsize int
 
 var re1 = regexp.MustCompile(`^\w+_\d{4}__(?:sd|hd|3d)(?:_\w+)*_(190-230|350-500|525-300|780-100|810-498|270-390|1620-996|503-726|1140-726|3510-1089|100-100|140-140|1170-363|570-363)\.poster(?:#[0-9a-fA-F]{8})?\.(?:jpg|png)$`)
+
 var re2 = regexp.MustCompile(`^(?:sd|hd)_\d{4}(?:_3d)?(?:_\w+)+__(?:\w+_)*poster(190x230|350x500|525x300|780x100|810x498|270x390|1620x996|503x726|1140x726|3510x1089|100x100|140x140|1170x363|570x363)(?:#[0-9a-fA-F]{8})?\.(?:jpg|png)$`)
+
+var reGazprom = regexp.MustCompile(`^\w+_\d{4}_(600x600|600x840|1920x1080|1260x400|1080x540)\.jpg$`)
+
 var reErr = regexp.MustCompile(`(Error:.*)`)
 var wg sync.WaitGroup
 var m sync.Mutex
@@ -41,6 +47,8 @@ func main() {
 	flag.StringVar(&format, "f", "all", "Format of the input files to compress (jpg|png|all)")
 	flag.IntVar(&threads, "t", 4, "Number of threads")
 	flag.BoolVar(&lossy, "l", false, "Lossy pgnquant compression for PNG files")
+	flag.BoolVar(&gazprom, "g", false, "Check Gazprom sizes instead of Rostelecom ones")
+	flag.IntVar(&maxsize, "m", 0, "Limit JPG output size, quality will be lowered to do this")
 	flag.Usage = func() {
 		ansi.Println("Usage: rtimg [options] [file1 file2 ...]")
 		flag.PrintDefaults()
@@ -49,6 +57,11 @@ func main() {
 
 	if format != "jpg" && format != "png" && format != "all" {
 		ansi.Println("\x1b[32;1mWrong --format flag, must be (jpg|png|all)\x1b[0m")
+		os.Exit(1)
+	}
+
+	if maxsize < 0 {
+		ansi.Println("\x1b[32;1mWrong --maxsize flag, must be >= 0\x1b[0m")
 		os.Exit(1)
 	}
 
@@ -119,16 +132,26 @@ func checkFile(filePath string) error {
 	fileName := filepath.Base(filePath)
 
 	// Check filenames with regexp.
-	if !(re1.MatchString(fileName) || re2.MatchString(fileName)) {
-		return errors.New("WRONG FILENAME")
-	}
-	if re1.MatchString(fileName) {
-		resolutionString = re1.ReplaceAllString(fileName, "${1}")
-		resolution = strings.Split(resolutionString, "-")
-	}
-	if re2.MatchString(fileName) {
-		resolutionString = re2.ReplaceAllString(fileName, "${1}")
-		resolution = strings.Split(resolutionString, "x")
+	if gazprom {
+		if !(reGazprom.MatchString(fileName)) {
+			return errors.New("WRONG FILENAME")
+		}
+		if reGazprom.MatchString(fileName) {
+			resolutionString = reGazprom.ReplaceAllString(fileName, "${1}")
+			resolution = strings.Split(resolutionString, "x")
+		}
+	} else {
+		if !(re1.MatchString(fileName) || re2.MatchString(fileName)) {
+			return errors.New("WRONG FILENAME")
+		}
+		if re1.MatchString(fileName) {
+			resolutionString = re1.ReplaceAllString(fileName, "${1}")
+			resolution = strings.Split(resolutionString, "-")
+		}
+		if re2.MatchString(fileName) {
+			resolutionString = re2.ReplaceAllString(fileName, "${1}")
+			resolution = strings.Split(resolutionString, "x")
+		}
 	}
 
 	// Use ffprobe to check files codec and resolution.
@@ -164,32 +187,67 @@ func saveJPG(filePath string) {
 	}
 	inputSize := round(float64(inputInfo.Size()) / 1000)
 
-	// Run ffmpeg to encode file to JPEG.
-	stdoutStderr, err := exec.Command("ffmpeg",
-		"-i", filePath,
-		"-q:v", "0",
-		"-pix_fmt", "rgb24",
-		"-map_metadata", "-1",
-		"-loglevel", "error",
-		"-y",
-		filePath+"####.jpg",
-	).CombinedOutput()
-	if err != nil {
-		printError(fileName, err.Error())
-		return
-	}
-	if len(stdoutStderr) > 0 {
-		printError(fileName, fmt.Sprintf("%v", stdoutStderr))
-		return
-	}
+	outputSize := math.MaxInt64
+	q := 0
 
-	// Get output filesize.
-	outputInfo, err := os.Stat(filePath + "####.jpg")
-	if err != nil {
-		printError(fileName, err.Error())
-		return
+	if maxsize > 0 {
+		for outputSize > maxsize && q <= 31 {
+			// Run ffmpeg to encode file to JPEG.
+			stdoutStderr, err := exec.Command("ffmpeg",
+				"-i", filePath,
+				"-q:v", strconv.Itoa(q),
+				"-pix_fmt", "rgb24",
+				"-map_metadata", "-1",
+				"-loglevel", "error",
+				"-y",
+				filePath+"####.jpg",
+			).CombinedOutput()
+			if err != nil {
+				printError(fileName, err.Error())
+				return
+			}
+			if len(stdoutStderr) > 0 {
+				printError(fileName, fmt.Sprintf("%v", stdoutStderr))
+				return
+			}
+
+			// Get output filesize.
+			outputInfo, err := os.Stat(filePath + "####.jpg")
+			if err != nil {
+				printError(fileName, err.Error())
+				return
+			}
+			outputSize = round(float64(outputInfo.Size()) / 1000)
+			q++
+		}
+	} else {
+		// Run ffmpeg to encode file to JPEG.
+		stdoutStderr, err := exec.Command("ffmpeg",
+			"-i", filePath,
+			"-q:v", strconv.Itoa(q),
+			"-pix_fmt", "rgb24",
+			"-map_metadata", "-1",
+			"-loglevel", "error",
+			"-y",
+			filePath+"####.jpg",
+		).CombinedOutput()
+		if err != nil {
+			printError(fileName, err.Error())
+			return
+		}
+		if len(stdoutStderr) > 0 {
+			printError(fileName, fmt.Sprintf("%v", stdoutStderr))
+			return
+		}
+
+		// Get output filesize.
+		outputInfo, err := os.Stat(filePath + "####.jpg")
+		if err != nil {
+			printError(fileName, err.Error())
+			return
+		}
+		outputSize = round(float64(outputInfo.Size()) / 1000)
 	}
-	outputSize := round(float64(outputInfo.Size()) / 1000)
 
 	// Replace the original file if the size difference is higher then 1 KB.
 	if (inputSize - outputSize) > 1 {
