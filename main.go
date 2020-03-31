@@ -20,6 +20,12 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+// TKeyVal -
+type TKeyVal struct {
+	key string
+	val int
+}
+
 var count = 0            // Filecount for progress visualisation.
 var errorsArray []string // Store errors in array.
 var files []string       // Store input fileNames in global space.
@@ -31,6 +37,8 @@ var threads int
 var lossy bool
 var gazprom bool
 var maxsize int
+var suffixlist string
+var suffixes = []TKeyVal{}
 
 var re1 = regexp.MustCompile(`^\w+_\d{4}__(?:sd|hd|3d)(?:_\w+)*_(190-230|350-500|525-300|780-100|810-498|270-390|1620-996|503-726|1140-726|3510-1089|100-100|140-140|1170-363|570-363)\.poster(?:#[0-9a-fA-F]{8})?\.(?:jpg|png)$`)
 
@@ -42,6 +50,32 @@ var reErr = regexp.MustCompile(`(Error:.*)`)
 var wg sync.WaitGroup
 var m sync.Mutex
 
+func parseSuffixes(in string) ([]TKeyVal, error) {
+	m := map[string]bool{}
+	list := []TKeyVal{}
+	for _, v := range strings.Split(in, ":") {
+		x := strings.Split(v, "=")
+		if len(x) != 2 {
+			return nil, fmt.Errorf("while parse element %q", v)
+		}
+		k := strings.TrimSpace(x[0])
+		s := strings.TrimSpace(x[1])
+		v, err := strconv.Atoi(s)
+		if err != nil {
+			return nil, fmt.Errorf("%v while parse element %q", err, v)
+		}
+		if v < 0 {
+			return nil, fmt.Errorf("negative size in element %q", v)
+		}
+		if _, ok := m[k]; ok {
+			return nil, fmt.Errorf("duplicated key in element %q", v)
+		}
+		m[k] = true
+		list = append(list, TKeyVal{key: k, val: v})
+	}
+	return list, nil
+}
+
 func main() {
 	// Parse input flags.
 	flag.StringVar(&format, "f", "all", "Format of the input files to compress (jpg|png|all)")
@@ -49,6 +83,7 @@ func main() {
 	flag.BoolVar(&lossy, "l", false, "Lossy pgnquant compression for PNG files")
 	flag.BoolVar(&gazprom, "g", false, "Check Gazprom sizes instead of Rostelecom ones")
 	flag.IntVar(&maxsize, "m", 0, "Limit JPG output size, quality will be lowered to do this")
+	flag.StringVar(&suffixlist, "s", "", "suffix=size(:suffix=size)*")
 	flag.Usage = func() {
 		ansi.Println("Usage: rtimg [options] [file1 file2 ...]")
 		flag.PrintDefaults()
@@ -62,6 +97,12 @@ func main() {
 
 	if maxsize < 0 {
 		ansi.Println("\x1b[32;1mWrong --maxsize flag, must be >= 0\x1b[0m")
+		os.Exit(1)
+	}
+	err := error(nil)
+	suffixes, err = parseSuffixes(suffixlist)
+	if err != nil {
+		ansi.Println("\x1b[32;1mError: ", err, "0\x1b[0m")
 		os.Exit(1)
 	}
 
@@ -176,6 +217,16 @@ func checkFile(filePath string) error {
 	return nil
 }
 
+func getMaxSize(filename string) int {
+	name := strings.TrimSuffix(filename, filepath.Ext(filename))
+	for _, x := range suffixes {
+		if strings.HasSuffix(name, x.key) {
+			return x.val
+		}
+	}
+	return maxsize
+}
+
 func saveJPG(filePath string) {
 	fileName := filepath.Base(filePath)
 
@@ -190,8 +241,10 @@ func saveJPG(filePath string) {
 	outputSize := math.MaxInt64
 	q := 0
 
-	if maxsize > 0 {
-		for outputSize > maxsize && q <= 31 {
+	uptoSize := getMaxSize(fileName)
+
+	if uptoSize > 0 {
+		for outputSize > uptoSize && q <= 31 {
 			// Run ffmpeg to encode file to JPEG.
 			stdoutStderr, err := exec.Command("ffmpeg",
 				"-i", filePath,
