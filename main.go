@@ -53,6 +53,9 @@ var m sync.Mutex
 func parseSuffixes(in string) ([]TKeyVal, error) {
 	m := map[string]bool{}
 	list := []TKeyVal{}
+	if strings.TrimSpace(in) == "" {
+		return list, nil
+	}
 	for _, v := range strings.Split(in, ":") {
 		x := strings.Split(v, "=")
 		if len(x) != 2 {
