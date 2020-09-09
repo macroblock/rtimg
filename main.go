@@ -44,7 +44,7 @@ var re1 = regexp.MustCompile(`^\w+_\d{4}__(?:sd|hd|3d)(?:_\w+)*_(190-230|350-500
 
 var re2 = regexp.MustCompile(`^(?:sd|hd)_\d{4}(?:_3d)?(?:_\w+)+__(?:\w+_)*poster(190x230|350x500|525x300|780x100|810x498|270x390|1620x996|503x726|1140x726|3510x1089|100x100|140x140|1170x363|570x363)(?:#[0-9a-fA-F]{8})?\.(?:jpg|png)$`)
 
-var reGazprom = regexp.MustCompile(`^\w+_\d{4}_(600x600|600x840|1920x1080|1260x400|1080x540)\.jpg$`)
+var reGazprom = regexp.MustCompile(`^\w+_\d{4}_(?:(?:(600x600|600x840|1920x1080(?:_left|_center)?|1260x400|1080x540)\.jpg)|(?:(logo)\.png))$`)
 
 var reErr = regexp.MustCompile(`(Error:.*)`)
 var wg sync.WaitGroup
@@ -156,9 +156,12 @@ func worker(c chan string) {
 		fileName := filepath.Base(filePath)
 		ext := filepath.Ext(filePath)
 
-		err := checkFile(filePath)
+		skip, err := checkFile(filePath)
 		if err != nil {
 			printError(fileName, err.Error())
+			continue
+		}
+		if skip {
 			continue
 		}
 		if ext == ".jpg" {
@@ -170,23 +173,29 @@ func worker(c chan string) {
 	}
 }
 
-func checkFile(filePath string) error {
+func checkFile(filePath string) (bool, error) {
 	var resolutionString string
 	var resolution []string
 	fileName := filepath.Base(filePath)
+	skip := false
 
 	// Check filenames with regexp.
 	if gazprom {
 		if !(reGazprom.MatchString(fileName)) {
-			return errors.New("WRONG FILENAME")
+			return skip, errors.New("WRONG FILENAME")
 		}
 		if reGazprom.MatchString(fileName) {
-			resolutionString = reGazprom.ReplaceAllString(fileName, "${1}")
+			resolutionString = reGazprom.ReplaceAllString(fileName, "${1}${2}")
+			// fmt.Printf("resolutionString: %v\n", resolutionString)
+			if resolutionString == "logo" {
+				resolutionString = "1920x1080"
+				skip = true
+			}
 			resolution = strings.Split(resolutionString, "x")
 		}
 	} else {
 		if !(re1.MatchString(fileName) || re2.MatchString(fileName)) {
-			return errors.New("WRONG FILENAME")
+			return skip, errors.New("WRONG FILENAME")
 		}
 		if re1.MatchString(fileName) {
 			resolutionString = re1.ReplaceAllString(fileName, "${1}")
@@ -201,23 +210,23 @@ func checkFile(filePath string) error {
 	// Use ffprobe to check files codec and resolution.
 	probe, err := ffinfo.Probe(filePath)
 	if err != nil {
-		return err
+		return skip, err
 	}
 	if probe.Streams[0].CodecName != "mjpeg" && probe.Streams[0].CodecName != "png" {
-		return errors.New(probe.Streams[0].CodecName)
+		return skip, errors.New(probe.Streams[0].CodecName)
 	}
 	if format == "jpg" && probe.Streams[0].CodecName != "mjpeg" {
-		return errors.New(probe.Streams[0].CodecName)
+		return skip, errors.New(probe.Streams[0].CodecName)
 	}
 	if format == "png" && probe.Streams[0].CodecName != "png" {
-		return errors.New(probe.Streams[0].CodecName)
+		return skip, errors.New(probe.Streams[0].CodecName)
 	}
 	w := strconv.Itoa(probe.Streams[0].Width)
 	h := strconv.Itoa(probe.Streams[0].Height)
 	if (w != resolution[0]) || (h != resolution[1]) {
-		return errors.New(w + "x" + h)
+		return skip, errors.New(w + "x" + h)
 	}
-	return nil
+	return skip, nil
 }
 
 func getMaxSize(filename string) int {
