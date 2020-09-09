@@ -188,7 +188,7 @@ func checkFile(filePath string) (bool, error) {
 			resolutionString = reGazprom.ReplaceAllString(fileName, "${1}${2}")
 			// trim possible "_left" or "_center"
 			resolutionString = strings.Split(resolutionString, "_")[0]
-			fmt.Printf("resolutionString: %v\n", resolutionString)
+			// fmt.Printf("resolutionString: %v\n", resolutionString)
 			if resolutionString == "logo" {
 				resolutionString = "1920x1080"
 				skip = true
