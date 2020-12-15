@@ -201,7 +201,7 @@ func checkFile(filePath string) (bool, error) {
 		}
 		if re1.MatchString(fileName) {
 			resolutionString = re1.ReplaceAllString(fileName, "${1}")
-			resolution = strings.Split(resolutionString, "-")
+			resolution = strings.Split(resolutionString, "x")
 		}
 		if re2.MatchString(fileName) {
 			resolutionString = re2.ReplaceAllString(fileName, "${1}")
