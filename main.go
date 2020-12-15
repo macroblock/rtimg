@@ -44,7 +44,7 @@ var re1 = regexp.MustCompile(`^\w+_\d{4}__(?:sd|hd|3d)(?:_\w+)*_(190x230|350x500
 
 var re2 = regexp.MustCompile(`^(?:sd|hd)_\d{4}(?:_3d)?(?:_\w+)+__(?:\w+_)*poster(190x230|350x500|525x300|780x100|810x498|270x390|1620x996|503x726|1140x726|3510x1089|100x100|140x140|1170x363|570x363)(?:#[0-9a-fA-F]{8})?\.(?:jpg|png)$`)
 
-var reGazprom = regexp.MustCompile(`^\w+_\d{4}_(?:(?:(600x600|600x840|1920x1080(?:_left|_center)?|1260x400|1080x540)\.jpg)|(?:(logo)\.png))$`)
+var reGazprom = regexp.MustCompile(`^\w+_\d{4}(?:__|_)(?:(?:(600x600|600x840|1920x1080(?:_left|_center)?|1260x400|1080x540)\.jpg)|(?:(logo)\.png))$`)
 
 var reErr = regexp.MustCompile(`(Error:.*)`)
 var wg sync.WaitGroup
