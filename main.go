@@ -225,6 +225,7 @@ func checkFile(filePath string) (bool, error) {
 	}
 	w := strconv.Itoa(probe.Streams[0].Width)
 	h := strconv.Itoa(probe.Streams[0].Height)
+	fmt.Printf("w: %v, h: %v, res: %v\n", w, h, resolution)
 	if (w != resolution[0]) || (h != resolution[1]) {
 		return skip, errors.New(w + "x" + h)
 	}
