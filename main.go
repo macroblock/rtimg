@@ -397,39 +397,7 @@ func maxSize(props tProps) (int64, error) {
 		limit = limit[:len(limit)-1]
 	}
 	val, err := atoi64(limit)
-	return val, err
-}
-
-func saveJPGfn(filePath, newFilePath string, q int) (int64, error) {
-	// Run ffmpeg to encode file to JPEG.
-	ret := int64(-1)
-	stdoutStderr, err := exec.Command("ffmpeg",
-		"-i", filePath,
-		"-q:v", strconv.Itoa(q),
-		"-pix_fmt", "rgb24",
-		"-map_metadata", "-1",
-		"-loglevel", "error",
-		"-y",
-		newFilePath,
-	).CombinedOutput()
-	if err != nil {
-		// printError(fileName, err.Error())
-		return ret, err
-	}
-	if len(stdoutStderr) > 0 {
-		// printError(fileName, fmt.Sprintf("%v", stdoutStderr))
-		return ret, fmt.Errorf("%v", stdoutStderr)
-	}
-
-	// Get output filesize.
-	outputInfo, err := os.Stat(newFilePath)
-	if err != nil {
-		// printError(fileName, err.Error())
-		return ret, err
-	}
-	// outputSize = round(float64(outputInfo.Size()) / 1000)
-	ret = outputInfo.Size()
-	return ret, nil
+	return val*int64(mult), err
 }
 
 func saveJPG(filePath string, props tProps) error {
@@ -453,44 +421,6 @@ func saveJPG(filePath string, props tProps) error {
 	if err != nil {
 		return err
 	}
-
-	// if uptoSize > 0 {
-		// for outputSize > uptoSize && q <= 31 {
-			// // Run ffmpeg to encode file to JPEG.
-			// stdoutStderr, err := exec.Command("ffmpeg",
-				// "-i", filePath,
-				// "-q:v", strconv.Itoa(q),
-				// "-pix_fmt", "rgb24",
-				// "-map_metadata", "-1",
-				// "-loglevel", "error",
-				// "-y",
-				// filePath+"####.jpg",
-			// ).CombinedOutput()
-			// if err != nil {
-				// // printError(fileName, err.Error())
-				// return err
-			// }
-			// if len(stdoutStderr) > 0 {
-				// // printError(fileName, fmt.Sprintf("%v", stdoutStderr))
-				// return fmt.Errorf("%v", stdoutStderr)
-			// }
-
-			// // Get output filesize.
-			// outputInfo, err := os.Stat(filePath + "####.jpg")
-			// if err != nil {
-				// // printError(fileName, err.Error())
-				// return err
-			// }
-			// // outputSize = round(float64(outputInfo.Size()) / 1000)
-			// outputSize = outputInfo.Size()
-		// }
-	// } else {
-		// size, err := saveJPGfn(filePath, filePath+"####.jpg", q)
-		// if err != nil {
-			// return err
-		// }
-		// outputSize = size
-	// }
 
 	for q <= 31 {
 		// Run ffmpeg to encode file to JPEG.
