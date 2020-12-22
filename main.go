@@ -14,11 +14,14 @@ import (
 	"sync"
 	"unicode/utf8"
 
+	"github.com/macroblock/imed/pkg/tagname"
 	"github.com/malashin/ffinfo"
 
 	ansi "github.com/malashin/go-ansi"
 	"golang.org/x/crypto/ssh/terminal"
 )
+
+const constKilobyte = 1000
 
 // TKeyVal -
 type TKeyVal struct {
@@ -35,16 +38,49 @@ var length int           // Store the amount of input files in global space.
 var format string
 var threads int
 var lossy bool
-var gazprom bool
+// var gazprom bool
 var maxsize int
 var suffixlist string
 var suffixes = []TKeyVal{}
 
-var re1 = regexp.MustCompile(`^\w+_\d{4}__(?:sd|hd|3d)(?:_\w+)*_(190x230|350x500|525x300|780x100|810x498|270x390|1620x996|503x726|1140x726|3510x1089|100x100|140x140|1170x363|570x363)\.poster(?:#[0-9a-fA-F]{8})?\.(?:jpg|png)$`)
+// var re1 = regexp.MustCompile(`^\w+_\d{4}__(?:sd|hd|3d)(?:_\w+)*_(190x230|350x500|525x300|780x100|810x498|270x390|1620x996|503x726|1140x726|3510x1089|100x100|140x140|1170x363|570x363)\.poster(?:#[0-9a-fA-F]{8})?\.(?:jpg|png)$`)
 
-var re2 = regexp.MustCompile(`^(?:sd|hd)_\d{4}(?:_3d)?(?:_\w+)+__(?:\w+_)*poster(190x230|350x500|525x300|780x100|810x498|270x390|1620x996|503x726|1140x726|3510x1089|100x100|140x140|1170x363|570x363)(?:#[0-9a-fA-F]{8})?\.(?:jpg|png)$`)
+// var re2 = regexp.MustCompile(`^(?:sd|hd)_\d{4}(?:_3d)?(?:_\w+)+__(?:\w+_)*poster(190x230|350x500|525x300|780x100|810x498|270x390|1620x996|503x726|1140x726|3510x1089|100x100|140x140|1170x363|570x363)(?:#[0-9a-fA-F]{8})?\.(?:jpg|png)$`)
 
-var reGazprom = regexp.MustCompile(`^\w+_\d{4}(?:__|_)(?:(?:(600x600|600x840|1920x1080(?:_left|_center)?|1260x400|1080x540)\.jpg)|(?:(logo)\.png))$`)
+// var reGazprom = regexp.MustCompile(`^\w+_\d{4}(?:__|_)(?:(?:(600x600|600x840|1920x1080(?:_left|_center)?|1260x400|1080x540)\.jpg)|(?:(logo)\.png))$`)
+
+
+type tProps struct {
+	size, ext, limit, opt string
+}
+
+var rtSizes = []tProps{
+	// "190x230 .jpg",
+	{"350x500",   ".jpg", "", ""},
+	{"525x300",   ".jpg", "", ""},
+	// "780x100 .jpg",
+	{"810x498",   ".jpg", "", ""},
+	{"270x390",   ".jpg", "", ""},
+	{"1620x996",  ".jpg", "", ""},
+	{"503x726",   ".jpg", "", ""},
+	// "1140x726 .jpg",
+	// "3510x1089 .jpg",
+	// "100x100 .jpg",
+	// "140x140 .jpg",
+	// "1170x363 .jpg",
+	// "570x363 .jpg",
+}
+
+var gpSizes = []tProps {
+	{"600x600",   ".jpg", "700k", ""},
+	{"600x840",   ".jpg", "700k", ""},
+	{"1920x1080", ".jpg", "700k", ""},
+	{"1920x1080", ".jpg", "700k", "left"},
+	{"1920x1080", ".jpg", "700k", "center"},
+	{"1260x400",  ".jpg", "700k", ""},
+	{"1080x540",  ".jpg", "700k", ""},
+	{"logo",      ".png", "1M",   ""},
+}
 
 var reErr = regexp.MustCompile(`(Error:.*)`)
 var wg sync.WaitGroup
@@ -84,7 +120,7 @@ func main() {
 	flag.StringVar(&format, "f", "all", "Format of the input files to compress (jpg|png|all)")
 	flag.IntVar(&threads, "t", 4, "Number of threads")
 	flag.BoolVar(&lossy, "l", false, "Lossy pgnquant compression for PNG files")
-	flag.BoolVar(&gazprom, "g", false, "Check Gazprom sizes instead of Rostelecom ones")
+	// flag.BoolVar(&gazprom, "g", false, "Check Gazprom sizes instead of Rostelecom ones")
 	flag.IntVar(&maxsize, "m", 0, "Limit JPG output size, quality will be lowered to do this")
 	flag.StringVar(&suffixlist, "s", "", "suffix=size(:suffix=size)*")
 	flag.Usage = func() {
@@ -154,82 +190,175 @@ func worker(c chan string) {
 	defer wg.Done()
 	for filePath := range c {
 		fileName := filepath.Base(filePath)
-		ext := filepath.Ext(filePath)
+		// ext := filepath.Ext(filePath)
 
-		skip, err := checkFile(filePath)
+		props, err := checkFile(filePath, true)
 		if err != nil {
 			printError(fileName, err.Error())
 			continue
 		}
-		if skip {
-			continue
+		// if props.size == "" {
+			// continue
+		// }
+		err = error(nil)
+		switch props.ext {
+			default: printError(fileName, fmt.Sprintf("unsupported extension [%q] to save file", props.ext))
+		case ".jpg":
+			err = saveJPG(filePath, props)
+		case ".png":
+			err = savePNG(filePath, props)
 		}
-		if ext == ".jpg" {
-			saveJPG(filePath)
-		}
-		if ext == ".png" {
-			savePNG(filePath)
+		if err != nil {
+			printError(fileName, err.Error())
 		}
 	}
 }
 
-func checkFile(filePath string) (bool, error) {
-	var resolutionString string
-	var resolution []string
-	fileName := filepath.Base(filePath)
-	skip := false
-
-	// Check filenames with regexp.
-	if gazprom {
-		if !(reGazprom.MatchString(fileName)) {
-			return skip, errors.New("WRONG FILENAME")
-		}
-		if reGazprom.MatchString(fileName) {
-			resolutionString = reGazprom.ReplaceAllString(fileName, "${1}${2}")
-			// trim possible "_left" or "_center"
-			resolutionString = strings.Split(resolutionString, "_")[0]
-			// fmt.Printf("resolutionString: %v\n", resolutionString)
-			if resolutionString == "logo" {
-				resolutionString = "1920x1080"
-				skip = true
-			}
-			resolution = strings.Split(resolutionString, "x")
-		}
-	} else {
-		if !(re1.MatchString(fileName) || re2.MatchString(fileName)) {
-			return skip, errors.New("WRONG FILENAME")
-		}
-		if re1.MatchString(fileName) {
-			resolutionString = re1.ReplaceAllString(fileName, "${1}")
-			resolution = strings.Split(resolutionString, "x")
-		}
-		if re2.MatchString(fileName) {
-			resolutionString = re2.ReplaceAllString(fileName, "${1}")
-			resolution = strings.Split(resolutionString, "x")
-		}
+func constructNameStr(tn *tagname.TTagname) (string, error) {
+	ret := ""
+	size, err := tn.GetTag("sizetag")
+	if err != nil {
+		return "", err
 	}
+	ret = size
 
-	// Use ffprobe to check files codec and resolution.
+	align, _ := tn.GetTag("aligntag")
+	if align != "" {
+		ret += " " + align
+	}
+	ext, _ := tn.GetTag("ext")
+	if ext != "" {
+		ret += " " + ext
+	}
+	return ret, nil
+}
+
+func constructHwStr(filePath string) (string, error) {
 	probe, err := ffinfo.Probe(filePath)
 	if err != nil {
-		return skip, err
+		return "", err
 	}
-	if probe.Streams[0].CodecName != "mjpeg" && probe.Streams[0].CodecName != "png" {
-		return skip, errors.New(probe.Streams[0].CodecName)
+	if len(probe.Streams)<1 {
+		return "", fmt.Errorf("len(probe.Streams)<1")
 	}
-	if format == "jpg" && probe.Streams[0].CodecName != "mjpeg" {
-		return skip, errors.New(probe.Streams[0].CodecName)
+	codecName := strings.ToLower(probe.Streams[0].CodecName)
+	switch codecName {
+	default:
+		codecName = "." + codecName
+	case "mjpeg":
+		codecName = ".jpg"
 	}
-	if format == "png" && probe.Streams[0].CodecName != "png" {
-		return skip, errors.New(probe.Streams[0].CodecName)
+	size := fmt.Sprintf("%vx%v", probe.Streams[0].Width, probe.Streams[0].Height)
+
+	return size + " " + codecName, nil
+}
+
+func checkFile(filePath string, isDeepCheck bool) (tProps, error) {
+	// var resolutionString string
+	// var resolution []string
+	// fileName := filepath.Base(filePath)
+	ret := tProps{}
+
+	tn, err := tagname.NewFromFilename(filePath, isDeepCheck)
+	if err != nil {
+		return ret, err
 	}
-	w := strconv.Itoa(probe.Streams[0].Width)
-	h := strconv.Itoa(probe.Streams[0].Height)
-	// fmt.Printf("w: %v, h: %v, res: %v\n", w, h, resolution)
-	if (w != resolution[0]) || (h != resolution[1]) {
-		return skip, errors.New(w + "x" + h)
+	typ, err := tn.GetTag("type")
+	if err != nil {
+		return ret, err
 	}
-	return skip, nil
+
+	var list []tProps
+	switch typ {
+	default:
+		return ret, fmt.Errorf("unsupported name format %q", typ)
+	case "poster":
+		list = rtSizes
+	case "poster.gp":
+		list = gpSizes
+	}
+
+	nameStr, err := constructNameStr(tn)
+	if err != nil {
+		return ret, err
+	}
+
+	if isDeepCheck {
+		hwStr, err := constructHwStr(filePath)
+		if err != nil {
+			return ret, err
+		}
+
+		s := strings.ReplaceAll(nameStr, "left ", "")
+		s = strings.ReplaceAll(s, "center ", "")
+		if s != hwStr && s != "logo .png" {
+			return ret, fmt.Errorf("props [%v] != file data [%v]", s, hwStr)
+		}
+	}
+
+	for _, item := range list {
+		s := item.size + " " + item.ext
+		if item.opt != "" {
+			s += " " + item.opt
+		}
+		if s == nameStr {
+			return item, nil
+		}
+	}
+
+	return ret, fmt.Errorf("props [%v] is unsupported for %q", nameStr, typ)
+
+	// Check filenames with regexp.
+	// if gazprom {
+		// if !(reGazprom.MatchString(fileName)) {
+			// return skip, errors.New("WRONG FILENAME")
+		// }
+		// if reGazprom.MatchString(fileName) {
+			// resolutionString = reGazprom.ReplaceAllString(fileName, "${1}${2}")
+			// // trim possible "_left" or "_center"
+			// resolutionString = strings.Split(resolutionString, "_")[0]
+			// // fmt.Printf("resolutionString: %v\n", resolutionString)
+			// if resolutionString == "logo" {
+				// resolutionString = "1920x1080"
+				// skip = true
+			// }
+			// resolution = strings.Split(resolutionString, "x")
+		// }
+	// } else {
+		// if !(re1.MatchString(fileName) || re2.MatchString(fileName)) {
+			// return skip, errors.New("WRONG FILENAME")
+		// }
+		// if re1.MatchString(fileName) {
+			// resolutionString = re1.ReplaceAllString(fileName, "${1}")
+			// resolution = strings.Split(resolutionString, "x")
+		// }
+		// if re2.MatchString(fileName) {
+			// resolutionString = re2.ReplaceAllString(fileName, "${1}")
+			// resolution = strings.Split(resolutionString, "x")
+		// }
+	// }
+
+	// // Use ffprobe to check files codec and resolution.
+	// probe, err := ffinfo.Probe(filePath)
+	// if err != nil {
+		// return skip, err
+	// }
+	// if probe.Streams[0].CodecName != "mjpeg" && probe.Streams[0].CodecName != "png" {
+		// return skip, errors.New(probe.Streams[0].CodecName)
+	// }
+	// if format == "jpg" && probe.Streams[0].CodecName != "mjpeg" {
+		// return skip, errors.New(probe.Streams[0].CodecName)
+	// }
+	// if format == "png" && probe.Streams[0].CodecName != "png" {
+		// return skip, errors.New(probe.Streams[0].CodecName)
+	// }
+	// w := strconv.Itoa(probe.Streams[0].Width)
+	// h := strconv.Itoa(probe.Streams[0].Height)
+	// // fmt.Printf("w: %v, h: %v, res: %v\n", w, h, resolution)
+	// if (w != resolution[0]) || (h != resolution[1]) {
+		// return skip, errors.New(w + "x" + h)
+	// }
+	// return skip, nil
 }
 
 func getMaxSize(filename string) int {
@@ -242,53 +371,124 @@ func getMaxSize(filename string) int {
 	return maxsize
 }
 
-func saveJPG(filePath string) {
+func atoi64(s string) (int64, error) {
+	return strconv.ParseInt(s, 10, 64)
+}
+
+func maxSize(props tProps) (int64, error) {
+	limit := props.limit
+	if limit == "" {
+		return -1, nil
+	}
+	suffix := limit[len(limit)-1]
+	mult := -1
+	switch suffix {
+	case 'k', 'K': mult = constKilobyte
+	case 'M': mult = constKilobyte*constKilobyte
+	case 'G': mult = constKilobyte*constKilobyte*constKilobyte
+	}
+	if mult < 0 {
+		mult = 1
+	} else {
+		limit = limit[:len(limit)-1]
+	}
+	val, err := atoi64(props.limit)
+	return val, err
+}
+
+func saveJPGfn(filePath, newFilePath string, q int) (int64, error) {
+	// Run ffmpeg to encode file to JPEG.
+	ret := int64(-1)
+	stdoutStderr, err := exec.Command("ffmpeg",
+		"-i", filePath,
+		"-q:v", strconv.Itoa(q),
+		"-pix_fmt", "rgb24",
+		"-map_metadata", "-1",
+		"-loglevel", "error",
+		"-y",
+		newFilePath,
+	).CombinedOutput()
+	if err != nil {
+		// printError(fileName, err.Error())
+		return ret, err
+	}
+	if len(stdoutStderr) > 0 {
+		// printError(fileName, fmt.Sprintf("%v", stdoutStderr))
+		return ret, fmt.Errorf("%v", stdoutStderr)
+	}
+
+	// Get output filesize.
+	outputInfo, err := os.Stat(newFilePath)
+	if err != nil {
+		// printError(fileName, err.Error())
+		return ret, err
+	}
+	// outputSize = round(float64(outputInfo.Size()) / 1000)
+	ret = outputInfo.Size()
+	return ret, nil
+}
+
+func saveJPG(filePath string, props tProps) error {
 	fileName := filepath.Base(filePath)
 
 	// Get input filesize.
 	inputInfo, err := os.Stat(filePath)
 	if err != nil {
-		printError(fileName, err.Error())
-		return
+		// printError(fileName, err.Error())
+		return err
 	}
-	inputSize := round(float64(inputInfo.Size()) / 1000)
+	// inputSize := round(float64(inputInfo.Size() / 1000)
+	inputSize := inputInfo.Size()
 
-	outputSize := math.MaxInt64
+	// outputSize := int64(math.MaxInt64)
+	outputSize := int64(-1)
 	q := 0
 
-	uptoSize := getMaxSize(fileName)
+	// uptoSize := getMaxSize(fileName)
+	uptoSize, err := maxSize(props)
+	if err != nil {
+		return err
+	}
 
-	if uptoSize > 0 {
-		for outputSize > uptoSize && q <= 31 {
-			// Run ffmpeg to encode file to JPEG.
-			stdoutStderr, err := exec.Command("ffmpeg",
-				"-i", filePath,
-				"-q:v", strconv.Itoa(q),
-				"-pix_fmt", "rgb24",
-				"-map_metadata", "-1",
-				"-loglevel", "error",
-				"-y",
-				filePath+"####.jpg",
-			).CombinedOutput()
-			if err != nil {
-				printError(fileName, err.Error())
-				return
-			}
-			if len(stdoutStderr) > 0 {
-				printError(fileName, fmt.Sprintf("%v", stdoutStderr))
-				return
-			}
+	// if uptoSize > 0 {
+		// for outputSize > uptoSize && q <= 31 {
+			// // Run ffmpeg to encode file to JPEG.
+			// stdoutStderr, err := exec.Command("ffmpeg",
+				// "-i", filePath,
+				// "-q:v", strconv.Itoa(q),
+				// "-pix_fmt", "rgb24",
+				// "-map_metadata", "-1",
+				// "-loglevel", "error",
+				// "-y",
+				// filePath+"####.jpg",
+			// ).CombinedOutput()
+			// if err != nil {
+				// // printError(fileName, err.Error())
+				// return err
+			// }
+			// if len(stdoutStderr) > 0 {
+				// // printError(fileName, fmt.Sprintf("%v", stdoutStderr))
+				// return fmt.Errorf("%v", stdoutStderr)
+			// }
 
-			// Get output filesize.
-			outputInfo, err := os.Stat(filePath + "####.jpg")
-			if err != nil {
-				printError(fileName, err.Error())
-				return
-			}
-			outputSize = round(float64(outputInfo.Size()) / 1000)
-			q++
-		}
-	} else {
+			// // Get output filesize.
+			// outputInfo, err := os.Stat(filePath + "####.jpg")
+			// if err != nil {
+				// // printError(fileName, err.Error())
+				// return err
+			// }
+			// // outputSize = round(float64(outputInfo.Size()) / 1000)
+			// outputSize = outputInfo.Size()
+		// }
+	// } else {
+		// size, err := saveJPGfn(filePath, filePath+"####.jpg", q)
+		// if err != nil {
+			// return err
+		// }
+		// outputSize = size
+	// }
+
+	for q <= 31 {
 		// Run ffmpeg to encode file to JPEG.
 		stdoutStderr, err := exec.Command("ffmpeg",
 			"-i", filePath,
@@ -300,54 +500,64 @@ func saveJPG(filePath string) {
 			filePath+"####.jpg",
 		).CombinedOutput()
 		if err != nil {
-			printError(fileName, err.Error())
-			return
+			// printError(fileName, err.Error())
+			return err
 		}
 		if len(stdoutStderr) > 0 {
-			printError(fileName, fmt.Sprintf("%v", stdoutStderr))
-			return
+			// printError(fileName, fmt.Sprintf("%v", stdoutStderr))
+			return fmt.Errorf("%v", stdoutStderr)
 		}
 
 		// Get output filesize.
 		outputInfo, err := os.Stat(filePath + "####.jpg")
 		if err != nil {
-			printError(fileName, err.Error())
-			return
+			// printError(fileName, err.Error())
+			return err
 		}
-		outputSize = round(float64(outputInfo.Size()) / 1000)
+		// outputSize = round(float64(outputInfo.Size()) / 1000)
+		outputSize = outputInfo.Size()
+		// size, err := saveJPGfn(filePath, filePath+"####.jpg", q)
+		if err != nil {
+			return err
+		}
+		q++
+		if (uptoSize < 0) || (outputSize <= uptoSize) {
+			break
+		}
 	}
 
 	// Replace the original file if the size difference is higher then 1 KB.
-	if (inputSize - outputSize) > 1 {
+	if (inputSize - outputSize) > 1000 {
 		err = os.Rename(filePath+"####.jpg", filePath)
 		if err != nil {
-			printError(fileName, err.Error())
-			return
+			// printError(fileName, err.Error())
+			return err
 		}
-		printGreen(fileName, strconv.Itoa(inputSize)+"KB -> "+strconv.Itoa(outputSize)+"KB")
-		return
+		printGreen(fileName, fmt.Sprintf("%vKB -> %vKB", inputSize/1000, outputSize/1000))
+		return nil
 	}
 
 	// Delete temp file if the size difference is lower then 1 KB.
 	err = os.Remove(filePath + "####.jpg")
 	if err != nil {
-		printError(fileName, err.Error())
-		return
+		// printError(fileName, err.Error())
+		return nil
 	}
-	printYellow(fileName, strconv.Itoa(inputSize)+"KB")
-	return
+	printYellow(fileName, fmt.Sprintf("%vKB", inputSize/1000))
+	return nil
 }
 
-func savePNG(filePath string) {
+func savePNG(filePath string, props tProps) error {
 	fileName := filepath.Base(filePath)
 
 	// Get input filesize.
 	inputInfo, err := os.Stat(filePath)
 	if err != nil {
-		printError(fileName, err.Error())
-		return
+		// printError(fileName, err.Error())
+		return err
 	}
-	inputSize := round(float64(inputInfo.Size()) / 1000)
+	// inputSize := round(float64(inputInfo.Size()) / 1000)
+	inputSize := inputInfo.Size()
 
 	if lossy {
 		// Use pngquant on input file.
@@ -363,21 +573,21 @@ func savePNG(filePath string) {
 				filePath+"####.png",
 			).CombinedOutput()
 			if len(stdoutStderr) > 0 {
-				printError(fileName, fmt.Sprintf("%s", stdoutStderr))
-				return
+				// printError(fileName, fmt.Sprintf("%s", stdoutStderr))
+				return fmt.Errorf("%v", stdoutStderr)
 			}
 			if err != nil {
-				printError(fileName, err.Error())
-				return
+				// printError(fileName, err.Error())
+				return err
 			}
 			// Try using pngquant again.
 			err = pngQuant(filePath+"####.png", filePath+"####.png")
 			if err != nil {
-				printError(fileName, err.Error())
-				return
+				// printError(fileName, err.Error())
+				return err
 			}
 		}
-		return
+		return nil
 	}
 	// Use optipng on input file.
 	err = optiPNG(filePath, filePath+"####.png")
@@ -392,48 +602,50 @@ func savePNG(filePath string) {
 			filePath+"####.png",
 		).CombinedOutput()
 		if len(stdoutStderr) > 0 {
-			printError(fileName, fmt.Sprintf("%s", stdoutStderr))
-			return
+			// printError(fileName, fmt.Sprintf("%s", stdoutStderr))
+			return fmt.Errorf("%v", stdoutStderr)
 		}
 		if err != nil {
-			printError(fileName, err.Error())
-			return
+			// printError(fileName, err.Error())
+			return err
 		}
 		// Try using optipng again.
 		err = optiPNG(filePath+"####.png", filePath+"####.png")
 		if err != nil {
-			printError(fileName, err.Error())
-			return
+			// printError(fileName, err.Error())
+			return err
 		}
 	}
 
 	// Get output filesize.
 	outputInfo, err := os.Stat(filePath + "####.png")
 	if err != nil {
-		printError(fileName, err.Error())
-		return
+		// printError(fileName, err.Error())
+		return err
 	}
-	outputSize := round(float64(outputInfo.Size()) / 1000)
+	// outputSize := round(float64(outputInfo.Size()) / 1000)
+	outputSize := outputInfo.Size()
 
 	// Replace the original file if the size difference is higher then 1 KB.
-	if (inputSize - outputSize) > 1 {
+	if (inputSize - outputSize) > 1000 {
 		err = os.Rename(filePath+"####.png", filePath)
 		if err != nil {
-			printError(fileName, err.Error())
-			return
+			// printError(fileName, err.Error())
+			return err
 		}
-		printGreen(fileName, strconv.Itoa(inputSize)+"KB -> "+strconv.Itoa(outputSize)+"KB")
-		return
+		// printGreen(fileName, strconv.Itoa(inputSize/1000)+"KB -> "+strconv.Itoa(outputSize/1000)+"KB")
+		printGreen(fileName, fmt.Sprintf("%vKB -> %vKB", inputSize/1000, outputSize/1000))
+		return nil
 	}
 
 	// Delete temp file if the size difference is lower then 1 KB.
 	err = os.Remove(filePath + "####.png")
 	if err != nil {
-		printError(fileName, err.Error())
-		return
+		// printError(fileName, err.Error())
+		return err
 	}
-	printYellow(fileName, strconv.Itoa(inputSize)+"KB")
-	return
+	printYellow(fileName, fmt.Sprintf("%vKB",inputSize/1000))
+	return nil
 }
 
 // pngQuant reduces the file size of input PNG file with lossy compression.
