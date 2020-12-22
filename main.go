@@ -69,6 +69,7 @@ var rtSizes = []tProps{
 	// "140x140 .jpg",
 	// "1170x363 .jpg",
 	// "570x363 .jpg",
+	{"logo",      ".png", "1M",   ""},
 }
 
 var gpSizes = []tProps {
@@ -79,7 +80,6 @@ var gpSizes = []tProps {
 	{"1920x1080", ".jpg", "700k", "center"},
 	{"1260x400",  ".jpg", "700k", ""},
 	{"1080x540",  ".jpg", "700k", ""},
-	{"logo",      ".png", "1M",   ""},
 }
 
 var reErr = regexp.MustCompile(`(Error:.*)`)
