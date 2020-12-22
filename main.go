@@ -23,6 +23,8 @@ import (
 
 const constKilobyte = 1000
 
+var mtx sync.Mutex
+
 // TKeyVal -
 type TKeyVal struct {
 	key string
@@ -192,7 +194,9 @@ func worker(c chan string) {
 		fileName := filepath.Base(filePath)
 		// ext := filepath.Ext(filePath)
 
+		mtx.Lock()
 		props, err := checkFile(filePath, true)
+		mtx.Unlock()
 		if err != nil {
 			printError(fileName, err.Error())
 			continue
@@ -392,7 +396,7 @@ func maxSize(props tProps) (int64, error) {
 	} else {
 		limit = limit[:len(limit)-1]
 	}
-	val, err := atoi64(props.limit)
+	val, err := atoi64(limit)
 	return val, err
 }
 
