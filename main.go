@@ -1,12 +1,10 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"math"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -37,20 +35,15 @@ var files []string       // Store input fileNames in global space.
 var length int           // Store the amount of input files in global space.
 
 // Flags
-var format string
+// var format string
 var threads int
 var lossy bool
+// var actionsFlag StringListFlags
+var flagCheckOnly bool
 // var gazprom bool
-var maxsize int
-var suffixlist string
-var suffixes = []TKeyVal{}
-
-// var re1 = regexp.MustCompile(`^\w+_\d{4}__(?:sd|hd|3d)(?:_\w+)*_(190x230|350x500|525x300|780x100|810x498|270x390|1620x996|503x726|1140x726|3510x1089|100x100|140x140|1170x363|570x363)\.poster(?:#[0-9a-fA-F]{8})?\.(?:jpg|png)$`)
-
-// var re2 = regexp.MustCompile(`^(?:sd|hd)_\d{4}(?:_3d)?(?:_\w+)+__(?:\w+_)*poster(190x230|350x500|525x300|780x100|810x498|270x390|1620x996|503x726|1140x726|3510x1089|100x100|140x140|1170x363|570x363)(?:#[0-9a-fA-F]{8})?\.(?:jpg|png)$`)
-
-// var reGazprom = regexp.MustCompile(`^\w+_\d{4}(?:__|_)(?:(?:(600x600|600x840|1920x1080(?:_left|_center)?|1260x400|1080x540)\.jpg)|(?:(logo)\.png))$`)
-
+// var maxsize int
+// var suffixlist string
+// var suffixes = []TKeyVal{}
 
 type tProps struct {
 	size, ext, limit, opt string
@@ -88,64 +81,79 @@ var reErr = regexp.MustCompile(`(Error:.*)`)
 var wg sync.WaitGroup
 var m sync.Mutex
 
-func parseSuffixes(in string) ([]TKeyVal, error) {
-	m := map[string]bool{}
-	list := []TKeyVal{}
-	if strings.TrimSpace(in) == "" {
-		return list, nil
-	}
-	for _, v := range strings.Split(in, ":") {
-		x := strings.Split(v, "=")
-		if len(x) != 2 {
-			return nil, fmt.Errorf("while parse element %q", v)
-		}
-		k := strings.TrimSpace(x[0])
-		s := strings.TrimSpace(x[1])
-		v, err := strconv.Atoi(s)
-		if err != nil {
-			return nil, fmt.Errorf("%v while parse element %q", err, v)
-		}
-		if v < 0 {
-			return nil, fmt.Errorf("negative size in element %q", v)
-		}
-		if _, ok := m[k]; ok {
-			return nil, fmt.Errorf("duplicated key in element %q", v)
-		}
-		m[k] = true
-		list = append(list, TKeyVal{key: k, val: v})
-	}
-	return list, nil
-}
+// func parseSuffixes(in string) ([]TKeyVal, error) {
+	// m := map[string]bool{}
+	// list := []TKeyVal{}
+	// if strings.TrimSpace(in) == "" {
+		// return list, nil
+	// }
+	// for _, v := range strings.Split(in, ":") {
+		// x := strings.Split(v, "=")
+		// if len(x) != 2 {
+			// return nil, fmt.Errorf("while parse element %q", v)
+		// }
+		// k := strings.TrimSpace(x[0])
+		// s := strings.TrimSpace(x[1])
+		// v, err := strconv.Atoi(s)
+		// if err != nil {
+			// return nil, fmt.Errorf("%v while parse element %q", err, v)
+		// }
+		// if v < 0 {
+			// return nil, fmt.Errorf("negative size in element %q", v)
+		// }
+		// if _, ok := m[k]; ok {
+			// return nil, fmt.Errorf("duplicated key in element %q", v)
+		// }
+		// m[k] = true
+		// list = append(list, TKeyVal{key: k, val: v})
+	// }
+	// return list, nil
+// }
+
+// type StringListFlags []string
+
+// func (i *StringListFlags) String() string {
+    // return fmt.Sprintf("%v", *i)
+// }
+
+// func (i *StringListFlags) Set(value string) error {
+    // *i = append(*i, value)
+    // return nil
+// }
 
 func main() {
 	// Parse input flags.
-	flag.StringVar(&format, "f", "all", "Format of the input files to compress (jpg|png|all)")
+	// flag.StringVar(&format, "f", "all", "Format of the input files to compress (jpg|png|all)")
 	flag.IntVar(&threads, "t", 4, "Number of threads")
 	flag.BoolVar(&lossy, "l", false, "Lossy pgnquant compression for PNG files")
 	// flag.BoolVar(&gazprom, "g", false, "Check Gazprom sizes instead of Rostelecom ones")
-	flag.IntVar(&maxsize, "m", 0, "Limit JPG output size, quality will be lowered to do this")
-	flag.StringVar(&suffixlist, "s", "", "suffix=size(:suffix=size)*")
+	flag.BoolVar(&flagCheckOnly, "c", false, "Check only (do not strip size)")
+	// flag.IntVar(&maxsize, "m", 0, "Limit JPG output size, quality will be lowered to do this")
+	// flag.StringVar(&suffixlist, "s", "", "suffix=size(:suffix=size)*")
+	// flag.StringVar(&scriptFlag, "xs", nil, "Execute action string - cammand:arg{,arg};")
+	// ?type:; @1; .clear; 2=0,_,1; @2; !type:; 0=1; @0; -type; $atag; +mtag:mxxx,myyy
+
 	flag.Usage = func() {
 		ansi.Println("Usage: rtimg [options] [file1 file2 ...]")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 
-	if format != "jpg" && format != "png" && format != "all" {
-		ansi.Println("\x1b[32;1mWrong --format flag, must be (jpg|png|all)\x1b[0m")
-		os.Exit(1)
-	}
+	// if format != "jpg" && format != "png" && format != "all" {
+		// ansi.Println("\x1b[32;1mWrong --format flag, must be (jpg|png|all)\x1b[0m")
+		// os.Exit(1)
+	// }
 
-	if maxsize < 0 {
-		ansi.Println("\x1b[32;1mWrong --maxsize flag, must be >= 0\x1b[0m")
-		os.Exit(1)
-	}
-	err := error(nil)
-	suffixes, err = parseSuffixes(suffixlist)
-	if err != nil {
-		ansi.Println("\x1b[32;1mError: ", err, "0\x1b[0m")
-		os.Exit(1)
-	}
+	// if maxsize < 0 {
+		// ansi.Println("\x1b[32;1mWrong --maxsize flag, must be >= 0\x1b[0m")
+		// os.Exit(1)
+	// }
+	// err := error(nil)
+	// suffixes, err = parseSuffixes(suffixlist)
+	// if err != nil {
+		// ansi.Println("\x1b[32;1mError: ", err, "0\x1b[0m")
+		// os.Exit(1)
+	// }
 
 	files = flag.Args()
 	length = len(files)
@@ -204,7 +212,19 @@ func worker(c chan string) {
 		// if props.size == "" {
 			// continue
 		// }
-		err = error(nil)
+
+		if flagCheckOnly {
+			printGreen(fileName, fmt.Sprintf("Ok"))
+			continue
+		}
+
+		// exiftool overwrites source file if all ok
+		err = exifTool(fileName)
+		if err != nil {
+			printError(fileName, err.Error())
+			continue
+		}
+
 		switch props.ext {
 			default: printError(fileName, fmt.Sprintf("unsupported extension [%q] to save file", props.ext))
 		case ".jpg":
@@ -365,15 +385,15 @@ func checkFile(filePath string, isDeepCheck bool) (tProps, error) {
 	// return skip, nil
 }
 
-func getMaxSize(filename string) int {
-	name := strings.TrimSuffix(filename, filepath.Ext(filename))
-	for _, x := range suffixes {
-		if strings.HasSuffix(name, x.key) {
-			return x.val
-		}
-	}
-	return maxsize
-}
+// func getMaxSize(filename string) int {
+	// name := strings.TrimSuffix(filename, filepath.Ext(filename))
+	// for _, x := range suffixes {
+		// if strings.HasSuffix(name, x.key) {
+			// return x.val
+		// }
+	// }
+	// return maxsize
+// }
 
 func atoi64(s string) (int64, error) {
 	return strconv.ParseInt(s, 10, 64)
@@ -398,228 +418,6 @@ func maxSize(props tProps) (int64, error) {
 	}
 	val, err := atoi64(limit)
 	return val*int64(mult), err
-}
-
-func saveJPG(filePath string, props tProps) error {
-	fileName := filepath.Base(filePath)
-
-	// Get input filesize.
-	inputInfo, err := os.Stat(filePath)
-	if err != nil {
-		// printError(fileName, err.Error())
-		return err
-	}
-	// inputSize := round(float64(inputInfo.Size() / 1000)
-	inputSize := inputInfo.Size()
-
-	// outputSize := int64(math.MaxInt64)
-	outputSize := int64(-1)
-	q := 0
-
-	// uptoSize := getMaxSize(fileName)
-	uptoSize, err := maxSize(props)
-	if err != nil {
-		return err
-	}
-
-	for q <= 31 {
-		// Run ffmpeg to encode file to JPEG.
-		stdoutStderr, err := exec.Command("ffmpeg",
-			"-i", filePath,
-			"-q:v", strconv.Itoa(q),
-			"-pix_fmt", "rgb24",
-			"-map_metadata", "-1",
-			"-loglevel", "error",
-			"-y",
-			filePath+"####.jpg",
-		).CombinedOutput()
-		if err != nil {
-			// printError(fileName, err.Error())
-			return err
-		}
-		if len(stdoutStderr) > 0 {
-			// printError(fileName, fmt.Sprintf("%v", stdoutStderr))
-			return fmt.Errorf("%v", stdoutStderr)
-		}
-
-		// Get output filesize.
-		outputInfo, err := os.Stat(filePath + "####.jpg")
-		if err != nil {
-			// printError(fileName, err.Error())
-			return err
-		}
-		// outputSize = round(float64(outputInfo.Size()) / 1000)
-		outputSize = outputInfo.Size()
-		// size, err := saveJPGfn(filePath, filePath+"####.jpg", q)
-		if err != nil {
-			return err
-		}
-		q++
-		if (uptoSize < 0) || (outputSize <= uptoSize) {
-			break
-		}
-	}
-
-	// Replace the original file if the size difference is higher then 1 KB.
-	if (inputSize - outputSize) > 1000 {
-		err = os.Rename(filePath+"####.jpg", filePath)
-		if err != nil {
-			// printError(fileName, err.Error())
-			return err
-		}
-		printGreen(fileName, fmt.Sprintf("%vKB -> %vKB", inputSize/1000, outputSize/1000))
-		return nil
-	}
-
-	// Delete temp file if the size difference is lower then 1 KB.
-	err = os.Remove(filePath + "####.jpg")
-	if err != nil {
-		// printError(fileName, err.Error())
-		return nil
-	}
-	printYellow(fileName, fmt.Sprintf("%vKB", inputSize/1000))
-	return nil
-}
-
-func savePNG(filePath string, props tProps) error {
-	fileName := filepath.Base(filePath)
-
-	// Get input filesize.
-	inputInfo, err := os.Stat(filePath)
-	if err != nil {
-		// printError(fileName, err.Error())
-		return err
-	}
-	// inputSize := round(float64(inputInfo.Size()) / 1000)
-	inputSize := inputInfo.Size()
-
-	if lossy {
-		// Use pngquant on input file.
-		err = pngQuant(filePath, filePath+"####.png")
-		if err != nil {
-			// Run ffmpeg to encode file to PNG.
-			stdoutStderr, err := exec.Command("ffmpeg",
-				"-i", filePath,
-				"-q:v", "0",
-				"-map_metadata", "-1",
-				"-loglevel", "error",
-				"-y",
-				filePath+"####.png",
-			).CombinedOutput()
-			if len(stdoutStderr) > 0 {
-				// printError(fileName, fmt.Sprintf("%s", stdoutStderr))
-				return fmt.Errorf("%v", stdoutStderr)
-			}
-			if err != nil {
-				// printError(fileName, err.Error())
-				return err
-			}
-			// Try using pngquant again.
-			err = pngQuant(filePath+"####.png", filePath+"####.png")
-			if err != nil {
-				// printError(fileName, err.Error())
-				return err
-			}
-		}
-		return nil
-	}
-	// Use optipng on input file.
-	err = optiPNG(filePath, filePath+"####.png")
-	if err != nil {
-		// Run ffmpeg to encode file to PNG.
-		stdoutStderr, err := exec.Command("ffmpeg",
-			"-i", filePath,
-			"-q:v", "0",
-			"-map_metadata", "-1",
-			"-loglevel", "error",
-			"-y",
-			filePath+"####.png",
-		).CombinedOutput()
-		if len(stdoutStderr) > 0 {
-			// printError(fileName, fmt.Sprintf("%s", stdoutStderr))
-			return fmt.Errorf("%v", stdoutStderr)
-		}
-		if err != nil {
-			// printError(fileName, err.Error())
-			return err
-		}
-		// Try using optipng again.
-		err = optiPNG(filePath+"####.png", filePath+"####.png")
-		if err != nil {
-			// printError(fileName, err.Error())
-			return err
-		}
-	}
-
-	// Get output filesize.
-	outputInfo, err := os.Stat(filePath + "####.png")
-	if err != nil {
-		// printError(fileName, err.Error())
-		return err
-	}
-	// outputSize := round(float64(outputInfo.Size()) / 1000)
-	outputSize := outputInfo.Size()
-
-	// Replace the original file if the size difference is higher then 1 KB.
-	if (inputSize - outputSize) > 1000 {
-		err = os.Rename(filePath+"####.png", filePath)
-		if err != nil {
-			// printError(fileName, err.Error())
-			return err
-		}
-		// printGreen(fileName, strconv.Itoa(inputSize/1000)+"KB -> "+strconv.Itoa(outputSize/1000)+"KB")
-		printGreen(fileName, fmt.Sprintf("%vKB -> %vKB", inputSize/1000, outputSize/1000))
-		return nil
-	}
-
-	// Delete temp file if the size difference is lower then 1 KB.
-	err = os.Remove(filePath + "####.png")
-	if err != nil {
-		// printError(fileName, err.Error())
-		return err
-	}
-	printYellow(fileName, fmt.Sprintf("%vKB",inputSize/1000))
-	return nil
-}
-
-// pngQuant reduces the file size of input PNG file with lossy compression.
-func pngQuant(filePath string, output string) error {
-	// Run pngquant to reduce the file size of input PNG file with lossy compression.
-	stdoutStderr, err := exec.Command("pngquant",
-		"--force",
-		"--skip-if-larger",
-		"--output", output,
-		"--quality=0-100",
-		"--speed", "1",
-		"--strip",
-		"--", filePath,
-	).CombinedOutput()
-	if len(stdoutStderr) > 0 {
-		return fmt.Errorf("%s", stdoutStderr)
-	}
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// optiPNG reduces the file size of input PNG file with lossless compression.
-func optiPNG(filePath string, output string) error {
-	// Run pngquant to reduce the file size of input PNG file with lossy compression.
-	stdoutStderr, err := exec.Command("optipng",
-		"--strip", "all",
-		"--out", output,
-		"--", filePath,
-	).CombinedOutput()
-	if len(stdoutStderr) > 0 {
-		if reErr.MatchString(string(stdoutStderr)) {
-			return errors.New(reErr.ReplaceAllString(string(stdoutStderr), "$1"))
-		}
-	}
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func printError(fileName, message string) {
