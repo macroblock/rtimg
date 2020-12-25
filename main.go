@@ -35,15 +35,10 @@ var files []string       // Store input fileNames in global space.
 var length int           // Store the amount of input files in global space.
 
 // Flags
-// var format string
 var threads int
 var lossy bool
 // var actionsFlag StringListFlags
 var flagCheckOnly bool
-// var gazprom bool
-// var maxsize int
-// var suffixlist string
-// var suffixes = []TKeyVal{}
 
 type tProps struct {
 	size, ext, limit, opt string
@@ -81,35 +76,6 @@ var reErr = regexp.MustCompile(`(Error:.*)`)
 var wg sync.WaitGroup
 var m sync.Mutex
 
-// func parseSuffixes(in string) ([]TKeyVal, error) {
-	// m := map[string]bool{}
-	// list := []TKeyVal{}
-	// if strings.TrimSpace(in) == "" {
-		// return list, nil
-	// }
-	// for _, v := range strings.Split(in, ":") {
-		// x := strings.Split(v, "=")
-		// if len(x) != 2 {
-			// return nil, fmt.Errorf("while parse element %q", v)
-		// }
-		// k := strings.TrimSpace(x[0])
-		// s := strings.TrimSpace(x[1])
-		// v, err := strconv.Atoi(s)
-		// if err != nil {
-			// return nil, fmt.Errorf("%v while parse element %q", err, v)
-		// }
-		// if v < 0 {
-			// return nil, fmt.Errorf("negative size in element %q", v)
-		// }
-		// if _, ok := m[k]; ok {
-			// return nil, fmt.Errorf("duplicated key in element %q", v)
-		// }
-		// m[k] = true
-		// list = append(list, TKeyVal{key: k, val: v})
-	// }
-	// return list, nil
-// }
-
 // type StringListFlags []string
 
 // func (i *StringListFlags) String() string {
@@ -138,22 +104,6 @@ func main() {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
-
-	// if format != "jpg" && format != "png" && format != "all" {
-		// ansi.Println("\x1b[32;1mWrong --format flag, must be (jpg|png|all)\x1b[0m")
-		// os.Exit(1)
-	// }
-
-	// if maxsize < 0 {
-		// ansi.Println("\x1b[32;1mWrong --maxsize flag, must be >= 0\x1b[0m")
-		// os.Exit(1)
-	// }
-	// err := error(nil)
-	// suffixes, err = parseSuffixes(suffixlist)
-	// if err != nil {
-		// ansi.Println("\x1b[32;1mError: ", err, "0\x1b[0m")
-		// os.Exit(1)
-	// }
 
 	files = flag.Args()
 	length = len(files)
@@ -209,9 +159,6 @@ func worker(c chan string) {
 			printError(fileName, err.Error())
 			continue
 		}
-		// if props.size == "" {
-			// continue
-		// }
 
 		if flagCheckOnly {
 			printGreen(fileName, fmt.Sprintf("Ok"))
@@ -225,13 +172,18 @@ func worker(c chan string) {
 			continue
 		}
 
-		switch props.ext {
-			default: printError(fileName, fmt.Sprintf("unsupported extension [%q] to save file", props.ext))
-		case ".jpg":
-			err = saveJPG(filePath, props)
-		case ".png":
-			err = savePNG(filePath, props)
+		if props.size == "" {
+			continue
 		}
+
+		// switch props.ext {
+			// default: printError(fileName, fmt.Sprintf("unsupported extension [%q] to save file", props.ext))
+		// case ".jpg":
+			// err = saveJPG(filePath, props)
+		// case ".png":
+			// err = savePNG(filePath, props)
+		// }
+		err = reduceImageFile(filePath, props)
 		if err != nil {
 			printError(fileName, err.Error())
 		}
@@ -331,75 +283,13 @@ func checkFile(filePath string, isDeepCheck bool) (tProps, error) {
 	}
 
 	return ret, fmt.Errorf("props [%v] is unsupported for %q", nameStr, typ)
-
-	// Check filenames with regexp.
-	// if gazprom {
-		// if !(reGazprom.MatchString(fileName)) {
-			// return skip, errors.New("WRONG FILENAME")
-		// }
-		// if reGazprom.MatchString(fileName) {
-			// resolutionString = reGazprom.ReplaceAllString(fileName, "${1}${2}")
-			// // trim possible "_left" or "_center"
-			// resolutionString = strings.Split(resolutionString, "_")[0]
-			// // fmt.Printf("resolutionString: %v\n", resolutionString)
-			// if resolutionString == "logo" {
-				// resolutionString = "1920x1080"
-				// skip = true
-			// }
-			// resolution = strings.Split(resolutionString, "x")
-		// }
-	// } else {
-		// if !(re1.MatchString(fileName) || re2.MatchString(fileName)) {
-			// return skip, errors.New("WRONG FILENAME")
-		// }
-		// if re1.MatchString(fileName) {
-			// resolutionString = re1.ReplaceAllString(fileName, "${1}")
-			// resolution = strings.Split(resolutionString, "x")
-		// }
-		// if re2.MatchString(fileName) {
-			// resolutionString = re2.ReplaceAllString(fileName, "${1}")
-			// resolution = strings.Split(resolutionString, "x")
-		// }
-	// }
-
-	// // Use ffprobe to check files codec and resolution.
-	// probe, err := ffinfo.Probe(filePath)
-	// if err != nil {
-		// return skip, err
-	// }
-	// if probe.Streams[0].CodecName != "mjpeg" && probe.Streams[0].CodecName != "png" {
-		// return skip, errors.New(probe.Streams[0].CodecName)
-	// }
-	// if format == "jpg" && probe.Streams[0].CodecName != "mjpeg" {
-		// return skip, errors.New(probe.Streams[0].CodecName)
-	// }
-	// if format == "png" && probe.Streams[0].CodecName != "png" {
-		// return skip, errors.New(probe.Streams[0].CodecName)
-	// }
-	// w := strconv.Itoa(probe.Streams[0].Width)
-	// h := strconv.Itoa(probe.Streams[0].Height)
-	// // fmt.Printf("w: %v, h: %v, res: %v\n", w, h, resolution)
-	// if (w != resolution[0]) || (h != resolution[1]) {
-		// return skip, errors.New(w + "x" + h)
-	// }
-	// return skip, nil
 }
-
-// func getMaxSize(filename string) int {
-	// name := strings.TrimSuffix(filename, filepath.Ext(filename))
-	// for _, x := range suffixes {
-		// if strings.HasSuffix(name, x.key) {
-			// return x.val
-		// }
-	// }
-	// return maxsize
-// }
 
 func atoi64(s string) (int64, error) {
 	return strconv.ParseInt(s, 10, 64)
 }
 
-func maxSize(props tProps) (int64, error) {
+func getMaxSize(props tProps) (int64, error) {
 	limit := props.limit
 	if limit == "" {
 		return -1, nil
@@ -420,23 +310,42 @@ func maxSize(props tProps) (int64, error) {
 	return val*int64(mult), err
 }
 
-func printError(fileName, message string) {
-	errorsArray = append(errorsArray, "\x1b[31;1m"+message+"\x1b[0m "+fileName)
+
+func printColor(color int, isOk bool, filename, message string) {
 	m.Lock()
-	ansi.Println("\x1b[31;1m- " + countPad() + "/" + strconv.Itoa(length) + "\x1b[0m " + truncPad(fileName, 50, 'r') + " \x1b[31;1m" + message + "\x1b[0m")
+	sign := "-"
+	if isOk {
+		sign = "+"
+	}
+	c := strconv.Itoa(color)
+	ansi.Println("\x1b["+c+";1m" + sign + " " + countPad() + "/" + strconv.Itoa(length) + "\x1b[0m " + truncPad(filename, 50, 'r') + " \x1b["+c+";1m" + message + "\x1b[0m")
 	m.Unlock()
 }
 
-func printYellow(fileName, message string) {
-	m.Lock()
-	ansi.Println("\x1b[32;1m+ " + countPad() + "/" + strconv.Itoa(length) + "\x1b[0m " + truncPad(fileName, 50, 'r') + " \x1b[32;1m" + message + "\x1b[0m")
-	m.Unlock()
+func printError(filename, message string) {
+	errorsArray = append(errorsArray, "\x1b[31;1m"+message+"\x1b[0m "+filename)
+	printColor(31, true, filename, message)
+	// m.Lock()
+	// ansi.Println("\x1b[31;1m- " + countPad() + "/" + strconv.Itoa(length) + "\x1b[0m " + truncPad(fileName, 50, 'r') + " \x1b[31;1m" + message + "\x1b[0m")
+	// m.Unlock()
 }
 
-func printGreen(fileName, message string) {
-	m.Lock()
-	ansi.Println("\x1b[33;1m+ " + countPad() + "/" + strconv.Itoa(length) + "\x1b[0m " + truncPad(fileName, 50, 'r') + " \x1b[33;1m" + message + "\x1b[0m")
-	m.Unlock()
+func printYellow(filename, message string) {
+	printColor(33, true, filename, message)
+	// m.Lock()
+	// ansi.Println("\x1b[33;1m+ " + countPad() + "/" + strconv.Itoa(length) + "\x1b[0m " + truncPad(fileName, 50, 'r') + " \x1b[32;1m" + message + "\x1b[0m")
+	// m.Unlock()
+}
+
+func printGreen(filename, message string) {
+	printColor(32, true, filename, message)
+	// m.Lock()
+	// ansi.Println("\x1b[32;1m+ " + countPad() + "/" + strconv.Itoa(length) + "\x1b[0m " + truncPad(fileName, 50, 'r') + " \x1b[33;1m" + message + "\x1b[0m")
+	// m.Unlock()
+}
+
+func printMagenta(filename, message string) {
+	printColor(35, true, filename, message)
 }
 
 // Pad zeroes to current file number to have the same length as overall filecount.
