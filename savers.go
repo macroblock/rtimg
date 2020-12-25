@@ -172,7 +172,7 @@ func reduceImageFile(filePath string, props tProps) error {
 
 	msg := fmt.Sprintf("%vKB -> %vKB, q%v", inputSize/1000, outputSize/1000, q)
 	// q < -1 for .png
-	if q > 13 || q < -1 { // !!!FIXME: empirical value
+	if q > 13 || q < 0 { // !!!FIXME: empirical value
 		printMagenta(fileName, msg)
 	} else {
 		printYellow(fileName, msg)
