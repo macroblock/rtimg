@@ -272,11 +272,13 @@ func checkFile(filePath string, isDeepCheck bool) (tProps, error) {
 		}
 	}
 
+	fmt.Println("---->",nameStr)
 	for _, item := range list {
-		s := item.size + " " + item.ext
+		s := item.size
 		if item.opt != "" {
 			s += " " + item.opt
 		}
+		s += " " + item.ext
 		if s == nameStr {
 			return item, nil
 		}
