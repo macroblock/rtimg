@@ -152,7 +152,7 @@ func pngQuant(filePath string, output string) error {
 		"--", filePath,
 	).CombinedOutput()
 	if len(stdoutStderr) > 0 {
-		return fmt.Errorf("%s", stdoutStderr)
+		return fmt.Errorf("%q", string(stdoutStderr))
 	}
 	if err != nil {
 		return err
