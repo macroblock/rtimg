@@ -171,7 +171,7 @@ func exifTool(filePath string) error {
 	// }
 	if err != nil {
 		// return err
-		return fmt.Errorf("error: %s\ndata:\n%v", err.Error(), stdoutStderr)
+		return fmt.Errorf("error: %s\ndata:\n%q", err.Error(), string(stdoutStderr))
 	}
 	return nil
 }
