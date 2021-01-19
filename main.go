@@ -166,7 +166,7 @@ func worker(c chan string) {
 		}
 
 		// exiftool overwrites source file if all ok
-		err = exifTool(fileName)
+		err = exifTool(filePath)
 		if err != nil {
 			printError(fileName, err.Error())
 			continue
