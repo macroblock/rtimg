@@ -2,38 +2,28 @@ package main
 
 import (
 	"testing"
+
+	"github.com/macroblock/rtimg/pkg"
+	"github.com/macroblock/imed/pkg/tagname"
 )
 
 var (
 	tableCorrect = []struct {
 		skip bool
 		input string
+		limit int64
 	}{
 		//23456789012345678901234567890
 		{skip: false,
-			input: "sd_2018_sobibor__12_q0w2_ar2_poster525x300.jpg"},
+			input: "sd_2018_sobibor__12_q0w2_ar2_poster525x300.jpg",
+			limit: -1,
+		},
 	}
 	tableIncorrect = []string{
 		//23456789012345678901234567890
-		"a",
-		"a__",
-		"2000",
-		"2000__",
-		"a_200",
-		"a_20000",
-		"_a_2000",
-		"a-#_2000",
-		"a_2000.trailer.ext.zzz",
-		"a_2000.ext.zzz",
-		"a_2000__.ext.zzz",
-		"a_2000__tag__tag2",
-		"a__2000",
-		"The_name_s01_a_subname_2018__q0w0",
-		"The_name_s01_a_subname_2018__hd_q0w0_",
 		// "The_name_s01_zzz_2018__hd_q0w0",
 		// "sd_2018_Sobibor__12_q0w2_trailer.mpg",
 	}
-
 )
 
 type ttag struct {
@@ -43,10 +33,20 @@ type ttag struct {
 // TestCorrect -
 func TestCorrect(t *testing.T) {
 	for _, v := range tableCorrect {
-		skip, err := checkFile(v.input, false)
-		_ = skip
+		tn, err := tagname.NewFromFilename(v.input, false)
 		if err != nil {
-			t.Errorf("\n%q\ncheckFile() error:\n%v", v.input, err)
+			t.Errorf("\n%q\nNewFromFilename() error:\n%v", v.input, err)
+			continue
+		}
+
+		sizeLimit, err := rtimg.CheckImage(tn, false)
+		if err != nil {
+			t.Errorf("\n%q\nCheckImage() error:\n%v", v.input, err)
+			continue
+		}
+
+		if sizeLimit != v.limit {
+			t.Errorf("\n%q\nCheckImage() error:\n%v", v.input, err)
 			continue
 		}
 	}
@@ -55,8 +55,13 @@ func TestCorrect(t *testing.T) {
 // TestIncorrect -
 func TestIncorrect(t *testing.T) {
 	for _, v := range tableIncorrect {
-		skip, err := checkFile(v, false)
-		_ = skip
+		tn, err := tagname.NewFromFilename(v, false)
+		if err != nil {
+			t.Errorf("\n%q\nNewFromFilename() error:\n%v", v, err)
+			continue
+		}
+		sizeLimit, err := rtimg.CheckImage(tn, false)
+		_ = sizeLimit
 		if err == nil {
 			t.Errorf("\n%q\nhas no error", v)
 			continue

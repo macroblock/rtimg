@@ -1,4 +1,4 @@
-package main
+package rtimg
 
 import (
 	// "errors"
@@ -6,6 +6,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
+
+	// "github.com/macroblock/imed/pkg/tagname"
+	// "github.com/malashin/ffinfo"
 )
 
 func getFileSize(filename string) (int64, error) {
@@ -16,7 +20,7 @@ func getFileSize(filename string) (int64, error) {
 	return info.Size(), nil
 }
 
-func reduceJPG(nameIn, nameOut string, limitSize int64) (int64, int, error) {
+func ReduceJPG(nameIn, nameOut string, limitSize int64) (int64, int, error) {
 	q := 0
 	outputSize := int64(-1)
 	for q <= 31 {
@@ -50,8 +54,7 @@ func reduceJPG(nameIn, nameOut string, limitSize int64) (int64, int, error) {
 	return -1, -1, fmt.Errorf("cannot reduce file size (%v>%v)", outputSize, limitSize)
 }
 
-
-func reducePNG(nameIn, nameOut string, limitSize int64) (int64, int, error) {
+func ReducePNG(nameIn, nameOut string, limitSize int64) (int64, int, error) {
 	err := pngQuant(nameIn, nameOut)
 	if err != nil {
 		// Run ffmpeg to encode file to PNG.
@@ -85,8 +88,16 @@ func reducePNG(nameIn, nameOut string, limitSize int64) (int64, int, error) {
 	return outputSize, -1, nil
 }
 
+func ReduceImage(filePath string, sizeLimit int64) error {
+	err := exifTool(filePath)
+	if err != nil {
+		// printError(fileName, err.Error())
+		return err
+	}
+	if sizeLimit < 0 {
+		return nil
+	}
 
-func reduceImageFile(filePath string, props tProps) error {
 	fileName := filepath.Base(filePath)
 
 	inputSize, err := getFileSize(filePath)
@@ -94,13 +105,13 @@ func reduceImageFile(filePath string, props tProps) error {
 		return err
 	}
 
-	limitSize, err := getMaxSize(props)
-	if err != nil {
-		return err
-	}
+	// sizeLimit, err := getMaxSize(props)
+	// if err != nil {
+		// return err
+	// }
 
-	if inputSize <= limitSize || limitSize < 0 {
-		printGreen(fileName, fmt.Sprintf("%v <= %v", inputSize/1000, limitSize/1000))
+	if inputSize <= sizeLimit || sizeLimit < 0 {
+		PrintGreen(fileName, fmt.Sprintf("%v <= %v", inputSize/1000, sizeLimit/1000))
 		return nil
 	}
 
@@ -109,14 +120,17 @@ func reduceImageFile(filePath string, props tProps) error {
 	outputSize := int64(-1)
 	q := -1
 
-	switch props.ext {
-	default: printError(fileName, fmt.Sprintf("unsupported extension [%q] to process file", props.ext))
+	ext := strings.ToLower(filepath.Ext(nameIn))
+	switch ext {
+	default:
+		// printError(fileName, fmt.Sprintf("unsupported extension [%q] to process file", ext))
+		return fmt.Errorf("unsupported extension [%q] to process file", ext)
 	case ".jpg":
 		nameOut = filePath + "####.jpg"
-		outputSize, q, err = reduceJPG(nameIn, nameOut, limitSize)
+		outputSize, q, err = ReduceJPG(nameIn, nameOut, sizeLimit)
 	case ".png":
 		nameOut = filePath + "####.png"
-		outputSize, q, err = reducePNG(nameIn, nameOut, limitSize)
+		outputSize, q, err = ReducePNG(nameIn, nameOut, sizeLimit)
 	}
 	if err != nil {
 		// !!!FIXME: it's not good behavior to skip error checks
@@ -130,11 +144,11 @@ func reduceImageFile(filePath string, props tProps) error {
 		return err
 	}
 
-	msg := fmt.Sprintf("%vKB -> %vKB, q%v", inputSize/1000, outputSize/1000, q)
+	msg := fmt.Sprintf("%vKB -> %vKB, q%v", sizeLimit/1000, outputSize/1000, q)
 	if q > 13 || q < 0 { // !!!FIXME: empirical value
-		printMagenta(fileName, msg)
+		PrintMagenta(fileName, msg)
 	} else {
-		printYellow(fileName, msg)
+		PrintYellow(fileName, msg)
 	}
 	return nil
 }
