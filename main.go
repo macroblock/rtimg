@@ -153,15 +153,15 @@ func worker(c chan string) {
 		// ext := filepath.Ext(filePath)
 
 		mtx.Lock()
-		var tn rtimg.ITagname
-		var err error
-		tn, err = tagname.NewFromFilename(filePath, true)
+		// var tn rtimg.ITagname
+		// var err error
+		tn, err := tagname.NewFromFilename(filePath, true)
+		mtx.Unlock()
 		if err != nil {
 			printError(fileName, err.Error())
 			continue
 			// return ret, err
 		}
-		mtx.Unlock()
 
 		sizeLimit, err := rtimg.CheckImage(tn, true)
 		if err != nil {
