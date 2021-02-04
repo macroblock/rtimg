@@ -1,7 +1,6 @@
 package rtimg;
 
 import (
-	// "flag"
 	"fmt"
 	// "math"
 	// "os"
@@ -12,7 +11,6 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	// "github.com/macroblock/imed/pkg/tagname"
 	"github.com/malashin/ffinfo"
 
 	ansi "github.com/malashin/go-ansi"
@@ -32,20 +30,12 @@ type ITagname interface {
 var mtx sync.Mutex
 
 var rtSizes = []tProps{
-	// "190x230 .jpg",
 	{"350x500",   ".jpg", "", ""},
 	{"525x300",   ".jpg", "", ""},
-	// "780x100 .jpg",
 	{"810x498",   ".jpg", "", ""},
 	{"270x390",   ".jpg", "", ""},
 	{"1620x996",  ".jpg", "", ""},
 	{"503x726",   ".jpg", "", ""},
-	// "1140x726 .jpg",
-	// "3510x1089 .jpg",
-	// "100x100 .jpg",
-	// "140x140 .jpg",
-	// "1170x363 .jpg",
-	// "570x363 .jpg",
 	{"logo",      ".png", "1M",   ""},
 }
 
@@ -124,17 +114,9 @@ func constructHwStr(filePath string) (string, error) {
 }
 
 func CheckImage(tn ITagname, isDeepCheck bool) (int64, error) {
-	// var resolutionString string
-	// var resolution []string
-	// fileName := filepath.Base(filePath)
-	// ret := tProps{}
 	ret := int64(-1)
 	filePath := tn.Source()
 
-	// tn, err := tagname.NewFromFilename(filePath, isDeepCheck)
-	// if err != nil {
-		// return ret, err
-	// }
 	typ, err := tn.GetTag("type")
 	if err != nil {
 		return ret, err
@@ -194,22 +176,16 @@ func PrintColor(color int, isOk bool, filename, message string) {
 		sign = "+"
 	}
 	c := strconv.Itoa(color)
-	ansi.Println("\x1b["+c+";1m" + sign + " " + /* countPad() + "/" + strconv.Itoa(length) + */ "\x1b[0m " + truncPad(filename, 50, 'r') + " \x1b["+c+";1m" + message + "\x1b[0m")
+	ansi.Println("\x1b["+c+";1m" + sign + /* " " + countPad() + "/" + strconv.Itoa(length) + */ "\x1b[0m " + truncPad(filename, 50, 'r') + " \x1b["+c+";1m" + message + "\x1b[0m")
 	mtx.Unlock()
 }
 
 func PrintYellow(filename, message string) {
 	PrintColor(33, true, filename, message)
-	// m.Lock()
-	// ansi.Println("\x1b[33;1m+ " + countPad() + "/" + strconv.Itoa(length) + "\x1b[0m " + truncPad(fileName, 50, 'r') + " \x1b[32;1m" + message + "\x1b[0m")
-	// m.Unlock()
 }
 
 func PrintGreen(filename, message string) {
 	PrintColor(32, true, filename, message)
-	// m.Lock()
-	// ansi.Println("\x1b[32;1m+ " + countPad() + "/" + strconv.Itoa(length) + "\x1b[0m " + truncPad(fileName, 50, 'r') + " \x1b[33;1m" + message + "\x1b[0m")
-	// m.Unlock()
 }
 
 func PrintMagenta(filename, message string) {
