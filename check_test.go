@@ -3,13 +3,13 @@ package main
 import (
 	"testing"
 
-	"github.com/macroblock/rtimg/pkg"
 	"github.com/macroblock/imed/pkg/tagname"
+	"github.com/macroblock/rtimg/pkg"
 )
 
 var (
 	tableCorrect = []struct {
-		skip bool
+		skip  bool
 		input string
 		limit int64
 	}{
@@ -68,4 +68,3 @@ func TestIncorrect(t *testing.T) {
 		}
 	}
 }
-

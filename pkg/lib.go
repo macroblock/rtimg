@@ -1,4 +1,4 @@
-package rtimg;
+package rtimg
 
 import (
 	"fmt"
@@ -30,23 +30,23 @@ type ITagname interface {
 var mtx sync.Mutex
 
 var rtSizes = []tProps{
-	{"350x500",   ".jpg", "", ""},
-	{"525x300",   ".jpg", "", ""},
-	{"810x498",   ".jpg", "", ""},
-	{"270x390",   ".jpg", "", ""},
-	{"1620x996",  ".jpg", "", ""},
-	{"503x726",   ".jpg", "", ""},
-	{"logo",      ".png", "1M",   ""},
+	{"350x500", ".jpg", "", ""},
+	{"525x300", ".jpg", "", ""},
+	{"810x498", ".jpg", "", ""},
+	{"270x390", ".jpg", "", ""},
+	{"1620x996", ".jpg", "", ""},
+	{"503x726", ".jpg", "", ""},
+	{"logo", ".png", "1M", ""},
 }
 
-var gpSizes = []tProps {
-	{"600x600",   ".jpg", "700k", ""},
-	{"600x840",   ".jpg", "700k", ""},
+var gpSizes = []tProps{
+	{"600x600", ".jpg", "700k", ""},
+	{"600x840", ".jpg", "700k", ""},
 	{"1920x1080", ".jpg", "700k", ""},
 	{"1920x1080", ".jpg", "700k", "left"},
 	{"1920x1080", ".jpg", "700k", "center"},
-	{"1260x400",  ".jpg", "700k", ""},
-	{"1080x540",  ".jpg", "700k", ""},
+	{"1260x400", ".jpg", "700k", ""},
+	{"1080x540", ".jpg", "700k", ""},
 }
 
 func atoi64(s string) (int64, error) {
@@ -54,16 +54,18 @@ func atoi64(s string) (int64, error) {
 }
 
 func parseSizeLimit(limit string) (int64, error) {
-	// limit := props.limit
 	if limit == "" {
 		return -1, nil
 	}
 	suffix := limit[len(limit)-1]
 	mult := -1
 	switch suffix {
-	case 'k', 'K': mult = constKilobyte
-	case 'M': mult = constKilobyte*constKilobyte
-	case 'G': mult = constKilobyte*constKilobyte*constKilobyte
+	case 'k', 'K':
+		mult = constKilobyte
+	case 'M':
+		mult = constKilobyte * constKilobyte
+	case 'G':
+		mult = constKilobyte * constKilobyte * constKilobyte
 	}
 	if mult < 0 {
 		mult = 1
@@ -71,7 +73,7 @@ func parseSizeLimit(limit string) (int64, error) {
 		limit = limit[:len(limit)-1]
 	}
 	val, err := atoi64(limit)
-	return val*int64(mult), err
+	return val * int64(mult), err
 }
 
 func constructNameStr(tn ITagname) (string, error) {
@@ -98,7 +100,7 @@ func constructHwStr(filePath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if len(probe.Streams)<1 {
+	if len(probe.Streams) < 1 {
 		return "", fmt.Errorf("len(probe.Streams)<1")
 	}
 	codecName := strings.ToLower(probe.Streams[0].CodecName)
@@ -176,7 +178,7 @@ func PrintColor(color int, isOk bool, filename, message string) {
 		sign = "+"
 	}
 	c := strconv.Itoa(color)
-	ansi.Println("\x1b["+c+";1m" + sign + /* " " + countPad() + "/" + strconv.Itoa(length) + */ "\x1b[0m " + truncPad(filename, 50, 'r') + " \x1b["+c+";1m" + message + "\x1b[0m")
+	ansi.Println("\x1b[" + c + ";1m" + sign + /* " " + countPad() + "/" + strconv.Itoa(length) + */ "\x1b[0m " + truncPad(filename, 50, 'r') + " \x1b[" + c + ";1m" + message + "\x1b[0m")
 	mtx.Unlock()
 }
 
@@ -194,13 +196,13 @@ func PrintMagenta(filename, message string) {
 
 // Pad zeroes to current file number to have the same length as overall filecount.
 // func countPad() string {
-	// count++
-	// c := strconv.Itoa(count)
-	// pad := len(strconv.Itoa(length)) - len(c)
-	// for i := pad; i > 0; i-- {
-		// c = "0" + c
-	// }
-	// return c
+// count++
+// c := strconv.Itoa(count)
+// pad := len(strconv.Itoa(length)) - len(c)
+// for i := pad; i > 0; i-- {
+// c = "0" + c
+// }
+// return c
 // }
 
 // truncPad truncs or pads string to needed length.

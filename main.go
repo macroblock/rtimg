@@ -9,13 +9,12 @@ import (
 	"sync"
 	// "unicode/utf8"
 
-	"github.com/macroblock/rtimg/pkg"
 	"github.com/macroblock/imed/pkg/tagname"
+	"github.com/macroblock/rtimg/pkg"
 
 	ansi "github.com/malashin/go-ansi"
 	"golang.org/x/crypto/ssh/terminal"
 )
-
 
 var mtx sync.Mutex
 
@@ -162,4 +161,3 @@ func printError(filename, message string) {
 	// m.Unlock()
 	mtx.Unlock()
 }
-

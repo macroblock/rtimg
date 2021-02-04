@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-
 	// "github.com/macroblock/imed/pkg/tagname"
 	// "github.com/malashin/ffinfo"
 )
@@ -107,7 +106,7 @@ func ReduceImage(filePath string, sizeLimit int64) error {
 
 	// sizeLimit, err := getMaxSize(props)
 	// if err != nil {
-		// return err
+	// return err
 	// }
 
 	if inputSize <= sizeLimit || sizeLimit < 0 {
@@ -181,7 +180,7 @@ func exifTool(filePath string) error {
 		"-all=", filePath,
 	).CombinedOutput()
 	// if len(stdoutStderr) > 0 {
-		// return fmt.Errorf("%s", stdoutStderr)
+	// return fmt.Errorf("%s", stdoutStderr)
 	// }
 	if err != nil {
 		// return err
