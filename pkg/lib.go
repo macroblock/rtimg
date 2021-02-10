@@ -134,62 +134,6 @@ func WalkPath(path string) ([]string, error) {
 	return ret, err
 }
 
-// func CheckImage(tn ITagname, isDeepCheck bool) (int64, error) {
-	// ret := int64(-1)
-	// filePath := tn.Source()
-
-	// typ, err := tn.GetTag("type")
-	// if err != nil {
-		// return ret, err
-	// }
-
-	// var list []tProps
-	// switch typ {
-	// default:
-		// return ret, fmt.Errorf("unsupported name format %q", typ)
-	// case "poster":
-		// list = rtSizes
-	// case "poster.gp":
-		// list = gpSizes
-	// }
-
-	// nameStr, err := constructNameStr(tn)
-	// if err != nil {
-		// return ret, err
-	// }
-
-	// if isDeepCheck {
-		// hwStr, err := constructHwStr(filePath)
-		// if err != nil {
-			// return ret, err
-		// }
-
-		// s := strings.ReplaceAll(nameStr, "left ", "")
-		// s = strings.ReplaceAll(s, "center ", "")
-		// if s != hwStr && s != "logo .png" {
-			// return ret, fmt.Errorf("props [%v] != file data [%v]", s, hwStr)
-		// }
-	// }
-
-	// for _, item := range list {
-		// s := item.size
-		// if item.opt != "" {
-			// s += " " + item.opt
-		// }
-		// s += " " + item.ext
-
-		// if s == nameStr {
-			// sizeLimit, err := parseSizeLimit(item.limit)
-			// if err != nil {
-				// return ret, err
-			// }
-			// return sizeLimit, nil
-		// }
-	// }
-
-	// return ret, fmt.Errorf("props [%v] is unsupported for %q", nameStr, typ)
-// }
-
 func CheckImage(filePath string, tn ITagname) (*TKeyData, error) {
 	key, err := FindKey(filePath, tn)
 	if err != nil {

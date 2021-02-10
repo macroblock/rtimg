@@ -22,17 +22,11 @@ import (
 
 var mtx sync.Mutex
 
-// TKeyVal -
-type TKeyVal struct {
-	key string
-	val int
-}
-
 var count = 0            // Filecount for progress visualisation.
 var errorsArray []string // Store errors in array.
 var files []string       // Store input fileNames in global space.
 var length int           // Store the amount of input files in global space.
-var okFiles []string // list of files that are ok.
+var reportLines []string
 
 // Flags
 var threads int
@@ -92,12 +86,7 @@ func main() {
 
 	if flagReport {
 		if len(errorsArray) == 0 {
-			list, err := Report(okFiles)
-			if err != nil {
-				appendError("--report--", err)
-			} else {
-				clipboard.WriteAll(strings.Join(list, ""))
-			}
+			clipboard.WriteAll(strings.Join(reportLines, ""))
 		} else {
 			clipboard.WriteAll(deescape(strings.Join(errorsArray, "\n")))
 		}
@@ -159,7 +148,10 @@ func worker(c chan string) {
 				printYellow(fileName, msg)
 			}
 
-			okFiles = append(okFiles, filePath)
+			err = ReportFile(filePath, *data)
+			if err != nil {
+				printError(fileName, err)
+			}
 			continue
 		}
 
@@ -173,57 +165,46 @@ func worker(c chan string) {
 			continue
 		}
 		printGreen(fileName, "Ok")
-		okFiles = append(okFiles, filePath)
+
+		err = ReportFile(filePath, *data)
+		if err != nil {
+			printError(fileName, err)
+		}
 	}
 }
 
-func Report(files []string) ([]string, error) {
-	var ret []string
-
-	for _, file := range files {
-		file = strings.TrimSpace(file)
-		if file == "" {
-			continue
-		}
-		fmt.Println(file)
-
-		dir := filepath.Dir(file)
-		file := filepath.Base(file)
-		po := ""
-		if x := strings.Split(dir, string(os.PathSeparator)); len(x) > 1 {
-			po = x[1]
-		}
-
-		tn, err := tagname.NewFromFilename(file, false)
-		if err != nil {
-			return nil, err
-		}
-		typ, err := tn.GetTag("type")
-		if typ == "poster" {
-			return nil, fmt.Errorf("type must be %q, not %q", "poster.gp", typ)
-		}
-
-		jobType := "### Error ###"
-
-		switch typ {
-		default: return nil, fmt.Errorf("unsupported type %q", typ)
-		case "poster.gp":
-			ext, _ := tn.GetTag("ext")
-			switch ext {
-			default:
-				return nil, fmt.Errorf("unsupported extension %q for type %q", ext, typ)
-			case ".jpg":
-				jobType = "Постер"
-			case ".psd":
-				jobType = "Постер (исходник)"
-			} // switch ext
-		} // switch typ
-
-		s := file + "\t" + jobType + "\t" + "\t" + po + "\n"
-		// fmt.Print(s)
-		ret = append(ret, s)
+func ReportFile(path string, data rtimg.TKeyData) error {
+	if !flagReport {
+		return nil
 	}
-	return ret, nil
+
+	dir := filepath.Dir(path)
+	file := filepath.Base(path)
+	po := ""
+	if x := strings.Split(dir, string(os.PathSeparator)); len(x) > 1 {
+		po = x[1]
+	}
+
+	jobType := "### Error ###"
+
+	switch data.Type {
+	default: return fmt.Errorf("unsupported type %q", data.Type)
+	case "gp":
+		ext := filepath.Ext(path)
+		switch ext {
+		default:
+			return fmt.Errorf("unsupported extension %q for type %q", ext, data.Type)
+		case ".jpg":
+			jobType = "Постер"
+		case ".psd":
+			jobType = "Постер (исходник)"
+		} // switch ext
+	} // switch typ
+
+	s := file + "\t" + jobType + "\t" + "\t" + po + "\n"
+	// fmt.Print(s)
+	reportLines = append(reportLines, s)
+	return nil
 }
 
 // round rounds floats into integer numbers.
