@@ -6,13 +6,17 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
 	"sync"
-	// "unicode/utf8"
+	"unicode/utf8"
 
 	"github.com/macroblock/imed/pkg/tagname"
 	"github.com/macroblock/rtimg/pkg"
 
 	ansi "github.com/malashin/go-ansi"
+	"github.com/atotto/clipboard"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -28,25 +32,23 @@ var count = 0            // Filecount for progress visualisation.
 var errorsArray []string // Store errors in array.
 var files []string       // Store input fileNames in global space.
 var length int           // Store the amount of input files in global space.
+var okFiles []string // list of files that are ok.
 
 // Flags
 var threads int
-var lossy bool
-var flagCheckOnly bool
+var flagDoReduceSize bool
+var flagRecursive bool
+var flagReport bool
 
 var wg sync.WaitGroup
 
 func main() {
 	// Parse input flags.
-	// flag.StringVar(&format, "f", "all", "Format of the input files to compress (jpg|png|all)")
 	flag.IntVar(&threads, "t", 4, "Number of threads")
-	flag.BoolVar(&lossy, "l", false, "Lossy pgnquant compression for PNG files")
-	// flag.BoolVar(&gazprom, "g", false, "Check Gazprom sizes instead of Rostelecom ones")
-	flag.BoolVar(&flagCheckOnly, "c", false, "Check only (do not strip size)")
-	// flag.IntVar(&maxsize, "m", 0, "Limit JPG output size, quality will be lowered to do this")
-	// flag.StringVar(&suffixlist, "s", "", "suffix=size(:suffix=size)*")
-	// flag.StringVar(&scriptFlag, "xs", nil, "Execute action string - cammand:arg{,arg};")
-	// ?type:; @1; .clear; 2=0,_,1; @2; !type:; 0=1; @0; -type; $atag; +mtag:mxxx,myyy
+	flag.BoolVar(&flagRecursive, "d", false, "Recursive walk directories (skip symlinks)")
+	// flag.BoolVar(&flagCheckOnly, "c", false, "Check only (do not strip size)")
+	flag.BoolVar(&flagDoReduceSize, "s", false, "Reduce size of the images")
+	flag.BoolVar(&flagReport, "r", false, "gen report gp")
 
 	flag.Usage = func() {
 		ansi.Println("Usage: rtimg [options] [file1 file2 ...]")
@@ -56,6 +58,11 @@ func main() {
 
 	files = flag.Args()
 	length = len(files)
+
+
+	if clipboard.Unsupported {
+		appendError("--clipboard--", fmt.Errorf("clipboard unsupported for the OS"))
+	}
 
 	// Create channel for goroutines
 	c := make(chan string)
@@ -68,14 +75,33 @@ func main() {
 
 	// Distribute files to free goroutines.
 	for _, filePath := range files {
-		c <- filePath
+		if !flagRecursive {
+			c <- filePath
+			continue
+		}
+		list, err := rtimg.WalkPath(filePath)
+		if err != nil {
+			appendError(filePath, err)
+		}
+		for _, path := range list {
+			c <- path
+		}
 	}
-
-	// Close channel.
 	close(c)
-
-	// Wait for workgroup to finish.
 	wg.Wait()
+
+	if flagReport {
+		if len(errorsArray) == 0 {
+			list, err := Report(okFiles)
+			if err != nil {
+				appendError("--report--", err)
+			} else {
+				clipboard.WriteAll(strings.Join(list, ""))
+			}
+		} else {
+			clipboard.WriteAll(deescape(strings.Join(errorsArray, "\n")))
+		}
+	}
 
 	// If there were any errors.
 	if len(errorsArray) > 0 {
@@ -95,6 +121,11 @@ func main() {
 	}
 }
 
+var reDeescape = regexp.MustCompile("(\x1b\\[.*?m)")
+func deescape(s string) string {
+	return reDeescape.ReplaceAllString(s, "")
+}
+
 func worker(c chan string) {
 	defer wg.Done()
 	for filePath := range c {
@@ -102,29 +133,97 @@ func worker(c chan string) {
 		// ext := filepath.Ext(filePath)
 
 		mtx.Lock()
+		// !!!TODO!!! something with deep check
 		tn, err := tagname.NewFromFilename(filePath, true)
 		mtx.Unlock()
 		if err != nil {
-			printError(fileName, err.Error())
-			continue
+			tn = nil
 		}
-
-		sizeLimit, err := rtimg.CheckImage(tn, true)
+		data, err := rtimg.CheckImage(filePath, tn)
 		if err != nil {
-			printError(fileName, err.Error())
+			printError(fileName, err)
+			continue
+		}
+		sizeLimit := data.FileSizeLimit
+
+		if flagDoReduceSize {
+			outputSize, q, err := rtimg.ReduceImage(filePath, data.FileSizeLimit)
+			if err != nil {
+				printError(fileName, err)
+				continue
+			}
+			msg := fmt.Sprintf("%v KB > %v KB, q%v", sizeLimit/1000, outputSize/1000, q)
+			if q > 13 || q < 0 { // !!!FIXME: empirical value
+				printMagenta(fileName, msg)
+			} else {
+				printYellow(fileName, msg)
+			}
+
+			okFiles = append(okFiles, filePath)
 			continue
 		}
 
-		if flagCheckOnly {
-			rtimg.PrintGreen(fileName, fmt.Sprintf("Ok"))
-			continue
-		}
-
-		err = rtimg.ReduceImage(filePath, sizeLimit)
+		inputSize, err := rtimg.GetFileSize(filePath)
 		if err != nil {
-			printError(fileName, err.Error())
+			printError(fileName, err)
+			continue
 		}
+		if inputSize > sizeLimit {
+			printError(fileName, fmt.Errorf("%v KB > %v KB", inputSize/1000, sizeLimit/1000))
+			continue
+		}
+		printGreen(fileName, "Ok")
+		okFiles = append(okFiles, filePath)
 	}
+}
+
+func Report(files []string) ([]string, error) {
+	var ret []string
+
+	for _, file := range files {
+		file = strings.TrimSpace(file)
+		if file == "" {
+			continue
+		}
+		fmt.Println(file)
+
+		dir := filepath.Dir(file)
+		file := filepath.Base(file)
+		po := ""
+		if x := strings.Split(dir, string(os.PathSeparator)); len(x) > 1 {
+			po = x[1]
+		}
+
+		tn, err := tagname.NewFromFilename(file, false)
+		if err != nil {
+			return nil, err
+		}
+		typ, err := tn.GetTag("type")
+		if typ == "poster" {
+			return nil, fmt.Errorf("type must be %q, not %q", "poster.gp", typ)
+		}
+
+		jobType := "### Error ###"
+
+		switch typ {
+		default: return nil, fmt.Errorf("unsupported type %q", typ)
+		case "poster.gp":
+			ext, _ := tn.GetTag("ext")
+			switch ext {
+			default:
+				return nil, fmt.Errorf("unsupported extension %q for type %q", ext, typ)
+			case ".jpg":
+				jobType = "Постер"
+			case ".psd":
+				jobType = "Постер (исходник)"
+			} // switch ext
+		} // switch typ
+
+		s := file + "\t" + jobType + "\t" + "\t" + po + "\n"
+		// fmt.Print(s)
+		ret = append(ret, s)
+	}
+	return ret, nil
 }
 
 // round rounds floats into integer numbers.
@@ -152,12 +251,67 @@ func waitForAnyKey() error {
 	return nil
 }
 
-func printError(filename, message string) {
+func printColor(color int, isOk bool, filename, message string) {
 	mtx.Lock()
-	errorsArray = append(errorsArray, "\x1b[31;1m"+message+"\x1b[0m "+filename)
-	rtimg.PrintColor(31, true, filename, message)
-	// m.Lock()
-	// ansi.Println("\x1b[31;1m- " + countPad() + "/" + strconv.Itoa(length) + "\x1b[0m " + truncPad(fileName, 50, 'r') + " \x1b[31;1m" + message + "\x1b[0m")
-	// m.Unlock()
+	sign := "-"
+	if isOk {
+		sign = "+"
+	}
+	c := strconv.Itoa(color)
+	ansi.Println("\x1b[" + c + ";1m" + sign + " " + countPad() + "/" + strconv.Itoa(length) +  "\x1b[0m " + truncPad(filename, 50, 'r') + " \x1b[" + c + ";1m" + message + "\x1b[0m")
 	mtx.Unlock()
+}
+
+func hasErrors() bool {
+	return len(errorsArray) > 0
+}
+
+func appendError(filename string, err error) {
+	if err == nil {
+		return
+	}
+	errorsArray = append(errorsArray, "\x1b[31;1m"+err.Error()+"\x1b[0m "+filename)
+}
+
+func printError(filename string, err error) {
+	// errorsArray = append(errorsArray, "\x1b[31;1m"+message+"\x1b[0m "+filename)
+	appendError(filename, err)
+	printColor(31, false, filename, err.Error())
+}
+
+func printYellow(filename, message string) {
+	printColor(33, true, filename, message)
+}
+
+func printGreen(filename, message string) {
+	printColor(32, true, filename, message)
+}
+
+func printMagenta(filename, message string) {
+	printColor(35, true, filename, message)
+}
+
+// Pad zeroes to current file number to have the same length as overall filecount.
+func countPad() string {
+	count++
+	c := strconv.Itoa(count)
+	pad := len(strconv.Itoa(length)) - len(c)
+	for i := pad; i > 0; i-- {
+		c = "0" + c
+	}
+	return c
+}
+
+// truncPad truncs or pads string to needed length.
+// If side is 'r' the string is padded and aligned to the right side.
+// Otherwise it is aligned to the left side.
+func truncPad(s string, n int, side byte) string {
+	len := utf8.RuneCountInString(s)
+	if len > n {
+		return string([]rune(s)[0:n-3]) + "\x1b[30;1m...\x1b[0m"
+	}
+	if side == 'r' {
+		return strings.Repeat(" ", n-len) + s
+	}
+	return s + strings.Repeat(" ", n-len)
 }

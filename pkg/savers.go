@@ -11,7 +11,7 @@ import (
 	// "github.com/malashin/ffinfo"
 )
 
-func getFileSize(filename string) (int64, error) {
+func GetFileSize(filename string) (int64, error) {
 	info, err := os.Stat(filename)
 	if err != nil {
 		return -1, err
@@ -41,7 +41,7 @@ func ReduceJPG(nameIn, nameOut string, limitSize int64) (int64, int, error) {
 			return -1, -1, fmt.Errorf("%v", stdoutStderr)
 		}
 
-		outputSize, err = getFileSize(nameOut)
+		outputSize, err = GetFileSize(nameOut)
 		if err != nil {
 			return -1, -1, err
 		}
@@ -77,7 +77,7 @@ func ReducePNG(nameIn, nameOut string, limitSize int64) (int64, int, error) {
 			return -1, -1, err
 		}
 	}
-	outputSize, err := getFileSize(nameOut)
+	outputSize, err := GetFileSize(nameOut)
 	if err != nil {
 		return -1, -1, err
 	}
@@ -87,31 +87,23 @@ func ReducePNG(nameIn, nameOut string, limitSize int64) (int64, int, error) {
 	return outputSize, -1, nil
 }
 
-func ReduceImage(filePath string, sizeLimit int64) error {
+// ReduceImage - returns outputSize, q, error
+func ReduceImage(filePath string, sizeLimit int64) (int64, int, error) {
 	err := exifTool(filePath)
 	if err != nil {
-		// printError(fileName, err.Error())
-		return err
-	}
-	if sizeLimit < 0 {
-		return nil
+		return -1, -1, err
 	}
 
-	fileName := filepath.Base(filePath)
+	// fileName := filepath.Base(filePath)
 
-	inputSize, err := getFileSize(filePath)
+	inputSize, err := GetFileSize(filePath)
 	if err != nil {
-		return err
+		return -1, -1, err
 	}
-
-	// sizeLimit, err := getMaxSize(props)
-	// if err != nil {
-	// return err
-	// }
 
 	if inputSize <= sizeLimit || sizeLimit < 0 {
-		PrintGreen(fileName, fmt.Sprintf("%v <= %v", inputSize/1000, sizeLimit/1000))
-		return nil
+		// PrintGreen(fileName, "Ok")
+		return inputSize, -1, nil
 	}
 
 	nameIn := filePath
@@ -123,7 +115,7 @@ func ReduceImage(filePath string, sizeLimit int64) error {
 	switch ext {
 	default:
 		// printError(fileName, fmt.Sprintf("unsupported extension [%q] to process file", ext))
-		return fmt.Errorf("unsupported extension [%q] to process file", ext)
+		return -1, -1, fmt.Errorf("unsupported extension [%q] to process file", ext)
 	case ".jpg":
 		nameOut = filePath + "####.jpg"
 		outputSize, q, err = ReduceJPG(nameIn, nameOut, sizeLimit)
@@ -135,21 +127,21 @@ func ReduceImage(filePath string, sizeLimit int64) error {
 		// !!!FIXME: it's not good behavior to skip error checks
 		err := os.Remove(nameOut)
 		_ = err
-		return err
+		return -1, -1, err
 	}
 
 	err = os.Rename(nameOut, nameIn)
 	if err != nil {
-		return err
+		return -1, -1, err
 	}
 
-	msg := fmt.Sprintf("%vKB -> %vKB, q%v", sizeLimit/1000, outputSize/1000, q)
-	if q > 13 || q < 0 { // !!!FIXME: empirical value
-		PrintMagenta(fileName, msg)
-	} else {
-		PrintYellow(fileName, msg)
-	}
-	return nil
+	// msg := fmt.Sprintf("%vKB -> %vKB, q%v", sizeLimit/1000, outputSize/1000, q)
+	// if q > 13 || q < 0 { // !!!FIXME: empirical value
+		// PrintMagenta(fileName, msg)
+	// } else {
+		// PrintYellow(fileName, msg)
+	// }
+	return outputSize, q, nil
 }
 
 // pngQuant reduces the file size of input PNG file with lossy compression.

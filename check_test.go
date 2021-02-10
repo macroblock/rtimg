@@ -39,13 +39,13 @@ func TestCorrect(t *testing.T) {
 			continue
 		}
 
-		sizeLimit, err := rtimg.CheckImage(tn, false)
+		data, err := rtimg.CheckImage("", tn)
 		if err != nil {
 			t.Errorf("\n%q\nCheckImage() error:\n%v", v.input, err)
 			continue
 		}
 
-		if sizeLimit != v.limit {
+		if data.FileSizeLimit != v.limit {
 			t.Errorf("\n%q\nCheckImage() error:\n%v", v.input, err)
 			continue
 		}
@@ -60,11 +60,30 @@ func TestIncorrect(t *testing.T) {
 			t.Errorf("\n%q\nNewFromFilename() error:\n%v", v, err)
 			continue
 		}
-		sizeLimit, err := rtimg.CheckImage(tn, false)
+		sizeLimit, err := rtimg.CheckImage("", tn)
 		_ = sizeLimit
 		if err == nil {
 			t.Errorf("\n%q\nhas no error", v)
 			continue
 		}
+	}
+}
+
+//TestKey -
+func TestKey(t *testing.T) {
+	path :=	"PROJECT_NAME/google_apple_feed/jpg/g_iconic_poster_600x800.jpg"
+	// key := newKey(path, "")
+	key, err := rtimg.FindKey(path, nil)
+	if err != nil {
+		t.Errorf("TestKey: %v", err)
+		return
+	}
+	hash := key.Hash()
+	if hash != "./google_apple_feed/jpg/g_iconic_poster_600x800.jpg" {
+		t.Errorf("TestKey: invalid hash %v", hash)
+	}
+	name := key.Name()
+	if name != "PROJECT_NAME" {
+		t.Errorf("TestKey: invalid name %v", name)
 	}
 }
