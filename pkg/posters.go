@@ -75,12 +75,11 @@ func newKey(path string, name string) (*TKey, error) {
 	// ### TODO ###: seems to be a dirty hack
 	p = strings.ReplaceAll(p, "\\", "/")
 
-	p = filepath.Clean(p)
 	segments := strings.Split(p, "/")
 
 	list := reSize.FindAllString(segments[len(segments)-1], -1)
 	if len(list) != 1 {
-		return nil, fmt.Errorf("newKey: something wrong with size tag")
+		return nil, fmt.Errorf("newKey: something wrong with a size tag")
 	}
 	size := list[0]
 	return &TKey{segments: segments, name: name, size: size}, nil
