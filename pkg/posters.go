@@ -39,16 +39,16 @@ var postersTable = map[string] TKeyData {
 	"./1260x400.jpg":         {"gp", 700*kb},
 	"./1080x540.jpg":         {"gp", 700*kb},
 
-	"./google_apple_feed/jpg/g_hasLogo_600x800.png":        {"gp", 3*mb},
-	"./google_apple_feed/jpg/g_hasTitleLogo_1800x1000.png": {"gp", 3*mb},
+	"./google_apple_feed/jpg/g_hasLogo_600x800.png":        {"gp", 2*mb},
+	"./google_apple_feed/jpg/g_hasTitleLogo_1800x1000.png": {"gp", -1},
 
-	"./google_apple_feed/jpg/g_iconic_poster_600x600.jpg":       {"gp", 3*mb},
-	"./google_apple_feed/jpg/g_iconic_poster_600x800.jpg":       {"gp", 3*mb},
-	"./google_apple_feed/jpg/g_iconic_poster_800x600.jpg":       {"gp", 3*mb},
-	"./google_apple_feed/jpg/g_iconic_poster_1000x1500.jpg":     {"gp", 3*mb},
-	"./google_apple_feed/jpg/g_iconic_poster_3840x2160.jpg":     {"gp", 3*mb},
-	"./google_apple_feed/jpg/g_iconic_background_1000x1500.jpg": {"gp", 3*mb},
-	"./google_apple_feed/jpg/g_iconic_background_3840x2160.jpg": {"gp", 3*mb},
+	"./google_apple_feed/jpg/g_iconic_poster_600x600.jpg":       {"gp", 2*mb},
+	"./google_apple_feed/jpg/g_iconic_poster_600x800.jpg":       {"gp", 2*mb},
+	"./google_apple_feed/jpg/g_iconic_poster_800x600.jpg":       {"gp", 2*mb},
+	"./google_apple_feed/jpg/g_iconic_poster_1000x1500.jpg":     {"gp", 2*mb},
+	"./google_apple_feed/jpg/g_iconic_poster_3840x2160.jpg":     {"gp", 2*mb},
+	"./google_apple_feed/jpg/g_iconic_background_1000x1500.jpg": {"gp", 2*mb},
+	"./google_apple_feed/jpg/g_iconic_background_3840x2160.jpg": {"gp", 2*mb},
 }
 
 var reSize = regexp.MustCompile(`^(?:.*_)?(?:(\d+x\d+)|(logo))[\._].*$`)
@@ -56,7 +56,7 @@ var reSize = regexp.MustCompile(`^(?:.*_)?(?:(\d+x\d+)|(logo))[\._].*$`)
 type TKey struct {
 	// if name is empty then it must be calculated as a preceding segment of a <key>
 	name string
-	size string
+	size string // filename's size tag. ("800x600" for example)
 	level int
 	segments []string
 }
@@ -89,6 +89,13 @@ func (o *TKey) Len() int {
 	return len(o.segments)
 }
 
+func (o *TKey) Segment(n int) (string, bool) {
+	if n < 0 || n >= len(o.segments) {
+		return "", false
+	}
+	return o.segments[n], true
+}
+
 func (o *TKey) Hash() string {
 	if o.level < 0 || o.level >= len(o.segments) {
 		return ""
@@ -111,11 +118,9 @@ func (o *TKey) Name() string {
 	if o.name != "" {
 		return o.name
 	}
-	level := o.level-2
-	if level < 0 || level >= len(o.segments) {
-		return ""
-	}
-	return o.segments[level]
+	ret, _ := o.Segment(len(o.segments)-2-o.level)
+	// fmt.Printf("\ndebug: name: %q level %v segs: %v\n", o.name, o.level, strings.Join(o.segments, "/"))
+	return ret
 }
 
 func (o *TKey) Data() *TKeyData {
@@ -132,6 +137,7 @@ func (o *TKey) Size() string {
 func (o *TKey) Base() string {
 	return o.segments[len(o.segments)-1]
 }
+
 
 func makeNameUsingTags(tn ITagname) (string, error) {
 	nameTags := []string{"name", "sxx", "sname", "exx", "ename", "comment", "year", "sdhd"}

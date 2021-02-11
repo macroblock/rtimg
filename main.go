@@ -26,13 +26,13 @@ var count = 0            // Filecount for progress visualisation.
 var errorsArray []string // Store errors in array.
 var files []string       // Store input fileNames in global space.
 var length int           // Store the amount of input files in global space.
-var reportLines []string
+// var reportLines []string
 
 // Flags
 var threads int
 var flagDoReduceSize bool
 var flagRecursive bool
-var flagReport bool
+// var flagReport bool
 
 var wg sync.WaitGroup
 
@@ -42,7 +42,7 @@ func main() {
 	flag.BoolVar(&flagRecursive, "d", false, "Recursive walk directories (skip symlinks)")
 	// flag.BoolVar(&flagCheckOnly, "c", false, "Check only (do not strip size)")
 	flag.BoolVar(&flagDoReduceSize, "s", false, "Reduce size of the images")
-	flag.BoolVar(&flagReport, "r", false, "gen report gp")
+	// flag.BoolVar(&flagReport, "r", false, "gen report gp")
 
 	flag.Usage = func() {
 		ansi.Println("Usage: rtimg [options] [file1 file2 ...]")
@@ -84,13 +84,13 @@ func main() {
 	close(c)
 	wg.Wait()
 
-	if flagReport {
-		if len(errorsArray) == 0 {
-			clipboard.WriteAll(strings.Join(reportLines, ""))
-		} else {
-			clipboard.WriteAll(deescape(strings.Join(errorsArray, "\n")))
-		}
-	}
+	// if flagReport {
+		// if len(errorsArray) == 0 {
+			// clipboard.WriteAll(strings.Join(reportLines, ""))
+		// } else {
+			// clipboard.WriteAll(deescape(strings.Join(errorsArray, "\n")))
+		// }
+	// }
 
 	// If there were any errors.
 	if len(errorsArray) > 0 {
@@ -174,9 +174,9 @@ func worker(c chan string) {
 }
 
 func ReportFile(path string, data rtimg.TKeyData) error {
-	if !flagReport {
-		return nil
-	}
+	// if !flagReport {
+		// return nil
+	// }
 
 	dir := filepath.Dir(path)
 	file := filepath.Base(path)
@@ -202,8 +202,9 @@ func ReportFile(path string, data rtimg.TKeyData) error {
 	} // switch typ
 
 	s := file + "\t" + jobType + "\t" + "\t" + po + "\n"
+	_ = s
 	// fmt.Print(s)
-	reportLines = append(reportLines, s)
+	// reportLines = append(reportLines, s)
 	return nil
 }
 
