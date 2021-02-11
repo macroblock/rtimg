@@ -6,7 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"regexp"
+	// "regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -26,13 +26,11 @@ var count = 0            // Filecount for progress visualisation.
 var errorsArray []string // Store errors in array.
 var files []string       // Store input fileNames in global space.
 var length int           // Store the amount of input files in global space.
-// var reportLines []string
 
 // Flags
 var threads int
 var flagDoReduceSize bool
 var flagRecursive bool
-// var flagReport bool
 
 var wg sync.WaitGroup
 
@@ -40,9 +38,7 @@ func main() {
 	// Parse input flags.
 	flag.IntVar(&threads, "t", 4, "Number of threads")
 	flag.BoolVar(&flagRecursive, "d", false, "Recursive walk directories (skip symlinks)")
-	// flag.BoolVar(&flagCheckOnly, "c", false, "Check only (do not strip size)")
 	flag.BoolVar(&flagDoReduceSize, "s", false, "Reduce size of the images")
-	// flag.BoolVar(&flagReport, "r", false, "gen report gp")
 
 	flag.Usage = func() {
 		ansi.Println("Usage: rtimg [options] [file1 file2 ...]")
@@ -84,14 +80,6 @@ func main() {
 	close(c)
 	wg.Wait()
 
-	// if flagReport {
-		// if len(errorsArray) == 0 {
-			// clipboard.WriteAll(strings.Join(reportLines, ""))
-		// } else {
-			// clipboard.WriteAll(deescape(strings.Join(errorsArray, "\n")))
-		// }
-	// }
-
 	// If there were any errors.
 	if len(errorsArray) > 0 {
 		// Print out all the errors from the error array.
@@ -110,17 +98,11 @@ func main() {
 	}
 }
 
-var reDeescape = regexp.MustCompile("(\x1b\\[.*?m)")
-func deescape(s string) string {
-	return reDeescape.ReplaceAllString(s, "")
-}
-
 func worker(c chan string) {
 	defer wg.Done()
 	for filePath := range c {
-		fileName := filepath.Base(filePath)
-		// ext := filepath.Ext(filePath)
 		fileNamePath := filePath
+		fileName := filepath.Base(filePath)
 		filePath, err := filepath.Abs(filePath)
 		if err != nil {
 			printError(fileNamePath, err)
@@ -173,41 +155,6 @@ func worker(c chan string) {
 	}
 }
 
-func ReportFile(path string, data rtimg.TKeyData) error {
-	// if !flagReport {
-		// return nil
-	// }
-
-	dir := filepath.Dir(path)
-	file := filepath.Base(path)
-	po := ""
-	if x := strings.Split(dir, string(os.PathSeparator)); len(x) > 1 {
-		po = x[1]
-	}
-
-	jobType := "### Error ###"
-
-	switch data.Type {
-	default: return fmt.Errorf("unsupported type %q", data.Type)
-	case "gp":
-		ext := filepath.Ext(path)
-		switch ext {
-		default:
-			return fmt.Errorf("unsupported extension %q for type %q", ext, data.Type)
-		case ".jpg":
-			jobType = "Постер"
-		case ".psd":
-			jobType = "Постер (исходник)"
-		} // switch ext
-	} // switch typ
-
-	s := file + "\t" + jobType + "\t" + "\t" + po + "\n"
-	_ = s
-	// fmt.Print(s)
-	// reportLines = append(reportLines, s)
-	return nil
-}
-
 // round rounds floats into integer numbers.
 func round(input float64) int {
 	if input < 0 {
@@ -252,11 +199,11 @@ func appendError(filename string, err error) {
 	if err == nil {
 		return
 	}
-	errorsArray = append(errorsArray, "\x1b[31;1m"+err.Error()+"\x1b[0m "+filename)
+	errorsArray = append(errorsArray, "\x1b[31;1m" + err.Error() + "\x1b[0m " +
+		filepath.Base(filename) + " ->\x1b[35m" + filepath.Dir(filename))
 }
 
 func printError(filename string, err error) {
-	// errorsArray = append(errorsArray, "\x1b[31;1m"+message+"\x1b[0m "+filename)
 	appendError(filename, err)
 	printColor(31, false, filepath.Base(filename), err.Error())
 }
