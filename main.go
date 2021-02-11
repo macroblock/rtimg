@@ -120,6 +120,12 @@ func worker(c chan string) {
 	for filePath := range c {
 		fileName := filepath.Base(filePath)
 		// ext := filepath.Ext(filePath)
+		fileNamePath := filePath
+		filePath, err := filepath.Abs(filePath)
+		if err != nil {
+			printError(fileNamePath, err)
+			continue
+		}
 
 		mtx.Lock()
 		// !!!TODO!!! something with deep check
@@ -130,7 +136,7 @@ func worker(c chan string) {
 		}
 		data, err := rtimg.CheckImage(filePath, tn)
 		if err != nil {
-			printError(fileName, err)
+			printError(fileNamePath, err)
 			continue
 		}
 		sizeLimit := data.FileSizeLimit
@@ -142,7 +148,7 @@ func worker(c chan string) {
 		if flagDoReduceSize {
 			outputSize, q, err := rtimg.ReduceImage(filePath, data.FileSizeLimit)
 			if err != nil {
-				printError(fileName, err)
+				printError(fileNamePath, err)
 				continue
 			}
 			msg := fmt.Sprintf("%v KB > %v KB, q%v", sizeLimit/1000, outputSize/1000, q)
@@ -156,11 +162,11 @@ func worker(c chan string) {
 
 		inputSize, err := rtimg.GetFileSize(filePath)
 		if err != nil {
-			printError(fileName, err)
+			printError(fileNamePath, err)
 			continue
 		}
 		if inputSize > sizeLimit {
-			printError(fileName, fmt.Errorf("%v KB > %v KB", inputSize/1000, sizeLimit/1000))
+			printError(fileNamePath, fmt.Errorf("%v KB > %v KB", inputSize/1000, sizeLimit/1000))
 			continue
 		}
 		printGreen(fileName, "Ok")
@@ -252,7 +258,7 @@ func appendError(filename string, err error) {
 func printError(filename string, err error) {
 	// errorsArray = append(errorsArray, "\x1b[31;1m"+message+"\x1b[0m "+filename)
 	appendError(filename, err)
-	printColor(31, false, filename, err.Error())
+	printColor(31, false, filepath.Base(filename), err.Error())
 }
 
 func printYellow(filename, message string) {
