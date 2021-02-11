@@ -40,15 +40,24 @@ var postersTable = map[string] TKeyData {
 	"./1080x540.jpg":         {"gp", 700*kb},
 
 	"./google_apple_feed/jpg/g_hasLogo_600x800.png":        {"gp", 2*mb},
+	"./google_apple_feed/psd/g_hasLogo_600x800.psd":        {"gp", -1},
 	"./google_apple_feed/jpg/g_hasTitleLogo_1800x1000.png": {"gp", -1},
+	"./google_apple_feed/psd/g_hasTitleLogo_1800x1000.psd": {"gp", -1},
 
 	"./google_apple_feed/jpg/g_iconic_poster_600x600.jpg":       {"gp", 2*mb},
+	"./google_apple_feed/psd/g_iconic_poster_600x600.psd":       {"gp", -1},
 	"./google_apple_feed/jpg/g_iconic_poster_600x800.jpg":       {"gp", 2*mb},
+	"./google_apple_feed/psd/g_iconic_poster_600x600.psd":       {"gp", -1},
 	"./google_apple_feed/jpg/g_iconic_poster_800x600.jpg":       {"gp", 2*mb},
+	"./google_apple_feed/psd/g_iconic_poster_800x600.psd":       {"gp", -1},
 	"./google_apple_feed/jpg/g_iconic_poster_1000x1500.jpg":     {"gp", 2*mb},
+	"./google_apple_feed/psd/g_iconic_poster_1000x1500.psd":     {"gp", -1},
 	"./google_apple_feed/jpg/g_iconic_poster_3840x2160.jpg":     {"gp", 2*mb},
+	"./google_apple_feed/psd/g_iconic_poster_3840x2160.psd":     {"gp", -1},
 	"./google_apple_feed/jpg/g_iconic_background_1000x1500.jpg": {"gp", 2*mb},
+	"./google_apple_feed/psd/g_iconic_background_1000x1500.psd": {"gp", -1},
 	"./google_apple_feed/jpg/g_iconic_background_3840x2160.jpg": {"gp", 2*mb},
+	"./google_apple_feed/psd/g_iconic_background_3840x2160.psd": {"gp", -1},
 }
 
 var reSize = regexp.MustCompile(`^(?:.*_)?(?:(\d+x\d+)|(logo))[\._].*$`)
