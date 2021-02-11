@@ -134,6 +134,10 @@ func worker(c chan string) {
 			continue
 		}
 		sizeLimit := data.FileSizeLimit
+		if sizeLimit < 0 {
+			printGreen(fileName, "Ok")
+			continue
+		}
 
 		if flagDoReduceSize {
 			outputSize, q, err := rtimg.ReduceImage(filePath, data.FileSizeLimit)
@@ -146,11 +150,6 @@ func worker(c chan string) {
 				printMagenta(fileName, msg)
 			} else {
 				printYellow(fileName, msg)
-			}
-
-			err = ReportFile(filePath, *data)
-			if err != nil {
-				printError(fileName, err)
 			}
 			continue
 		}
@@ -165,11 +164,6 @@ func worker(c chan string) {
 			continue
 		}
 		printGreen(fileName, "Ok")
-
-		// err = ReportFile(filePath, *data)
-		// if err != nil {
-			// printError(fileName, err)
-		// }
 	}
 }
 
