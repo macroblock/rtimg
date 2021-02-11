@@ -1,14 +1,11 @@
 package rtimg
 
 import (
-	// "errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	// "github.com/macroblock/imed/pkg/tagname"
-	// "github.com/malashin/ffinfo"
 )
 
 func GetFileSize(filename string) (int64, error) {
@@ -23,7 +20,6 @@ func ReduceJPG(nameIn, nameOut string, limitSize int64) (int64, int, error) {
 	q := 0
 	outputSize := int64(-1)
 	for q <= 31 {
-		// fmt.Println("q-->",q)
 		// Run ffmpeg to encode file to JPEG.
 		stdoutStderr, err := exec.Command("ffmpeg",
 			"-i", nameIn,
@@ -94,8 +90,6 @@ func ReduceImage(filePath string, sizeLimit int64) (int64, int, error) {
 		return -1, -1, err
 	}
 
-	// fileName := filepath.Base(filePath)
-
 	inputSize, err := GetFileSize(filePath)
 	if err != nil {
 		return -1, -1, err
@@ -114,7 +108,6 @@ func ReduceImage(filePath string, sizeLimit int64) (int64, int, error) {
 	ext := strings.ToLower(filepath.Ext(nameIn))
 	switch ext {
 	default:
-		// printError(fileName, fmt.Sprintf("unsupported extension [%q] to process file", ext))
 		return -1, -1, fmt.Errorf("unsupported extension [%q] to process file", ext)
 	case ".jpg":
 		nameOut = filePath + "####.jpg"
@@ -135,12 +128,6 @@ func ReduceImage(filePath string, sizeLimit int64) (int64, int, error) {
 		return -1, -1, err
 	}
 
-	// msg := fmt.Sprintf("%vKB -> %vKB, q%v", sizeLimit/1000, outputSize/1000, q)
-	// if q > 13 || q < 0 { // !!!FIXME: empirical value
-		// PrintMagenta(fileName, msg)
-	// } else {
-		// PrintYellow(fileName, msg)
-	// }
 	return outputSize, q, nil
 }
 
@@ -171,9 +158,6 @@ func exifTool(filePath string) error {
 		"-overwrite_original",
 		"-all=", filePath,
 	).CombinedOutput()
-	// if len(stdoutStderr) > 0 {
-	// return fmt.Errorf("%s", stdoutStderr)
-	// }
 	if err != nil {
 		// return err
 		return fmt.Errorf("error: %s\ndata:\n%q", err.Error(), string(stdoutStderr))
