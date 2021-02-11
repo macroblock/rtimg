@@ -166,10 +166,10 @@ func worker(c chan string) {
 		}
 		printGreen(fileName, "Ok")
 
-		err = ReportFile(filePath, *data)
-		if err != nil {
-			printError(fileName, err)
-		}
+		// err = ReportFile(filePath, *data)
+		// if err != nil {
+			// printError(fileName, err)
+		// }
 	}
 }
 
