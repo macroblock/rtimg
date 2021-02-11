@@ -123,10 +123,10 @@ func WalkPath(path string) ([]string, error) {
 		if info.IsDir() {
 			return nil
 		}
-		ext := filepath.Ext(path)
-		if !validExtension[ext] {
-			return nil
-		}
+		// ext := filepath.Ext(path)
+		// if !validExtension[ext] {
+			// return nil
+		// }
 		ret = append(ret, path)
 		return nil
 	})
