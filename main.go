@@ -127,14 +127,24 @@ func worker(c chan string) {
 			continue
 		}
 
+		inputSize, err := rtimg.GetFileSize(filePath)
+		if err != nil {
+			printError(fileNamePath, err)
+			continue
+		}
+
 		if flagDoReduceSize {
 			outputSize, q, err := rtimg.ReduceImage(filePath, data.FileSizeLimit)
 			if err != nil {
 				printError(fileNamePath, err)
 				continue
 			}
-			msg := fmt.Sprintf("%v KB > %v KB, q%v", sizeLimit/1000, outputSize/1000, q)
-			if q > 13 || q < 0 { // !!!FIXME: empirical value
+			if inputSize == outputSize {
+				printGreen(fileName, "Ok")
+				continue
+			}
+			msg := fmt.Sprintf("%v KB < %v KB, q: %v d: %v", outputSize/1000, sizeLimit/1000, q, inputSize-outputSize)
+			if q > 13 { // !!!FIXME: empirical value
 				printMagenta(fileName, msg)
 			} else {
 				printYellow(fileName, msg)
@@ -142,11 +152,6 @@ func worker(c chan string) {
 			continue
 		}
 
-		inputSize, err := rtimg.GetFileSize(filePath)
-		if err != nil {
-			printError(fileNamePath, err)
-			continue
-		}
 		if inputSize > sizeLimit {
 			printError(fileNamePath, fmt.Errorf("%v KB > %v KB", inputSize/1000, sizeLimit/1000))
 			continue
