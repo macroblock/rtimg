@@ -39,17 +39,17 @@ const (
 var validExtension = map[string]bool {}
 
 var postersTable = map[string] TKeyData {
-	"./350x500.jpg":  {"rt", none},
+	"./350x500.jpg":  {"rt", 1*mb},
 	"./350x500.psd":  {"rt", none},
-	"./525x300.jpg":  {"rt", none},
+	"./525x300.jpg":  {"rt", 1*mb},
 	"./525x300.psd":  {"rt", none},
-	"./810x498.jpg":  {"rt", none},
+	"./810x498.jpg":  {"rt", 1*mb},
 	"./810x498.psd":  {"rt", none},
-	"./270x390.jpg":  {"rt", none},
+	"./270x390.jpg":  {"rt", 1*mb},
 	"./270x390.psd":  {"rt", none},
-	"./1620x996.jpg": {"rt", none},
+	"./1620x996.jpg": {"rt", 1*mb},
 	"./1620x996.psd": {"rt", none},
-	"./503x726.jpg":  {"rt", none},
+	"./503x726.jpg":  {"rt", 1*mb},
 	"./503x726.psd":  {"rt", none},
 	"./logo.png":     {"rt", 1*mb},
 	"./logo.psd":     {"rt", none},
