@@ -16,7 +16,7 @@ var (
 		//23456789012345678901234567890
 		{skip: false,
 			input: "sd_2018_sobibor__12_q0w2_ar2_poster525x300.jpg",
-			limit: -1,
+			limit: 1000000,
 		},
 	}
 	tableIncorrect = []string{
