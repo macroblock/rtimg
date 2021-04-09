@@ -69,10 +69,12 @@ var postersTable = map[string] TKeyData {
 	"./1080x540.jpg":         {"gp", 700*kb},
 	"./1080x540.psd":         {"gp", none},
 
+	"./google_apple_feed/jpg/g_hasLogo_600x600.png":        {"gp", 2*mb},
+	"./google_apple_feed/psd/g_hasLogo_600x600.psd":        {"gp", none},
 	"./google_apple_feed/jpg/g_hasLogo_600x800.png":        {"gp", 2*mb},
 	"./google_apple_feed/psd/g_hasLogo_600x800.psd":        {"gp", none},
-	"./google_apple_feed/jpg/g_hasTitleLogo_1800x1000.png": {"gp", none},
-	"./google_apple_feed/psd/g_hasTitleLogo_1800x1000.psd": {"gp", none},
+	"./google_apple_feed/jpg/g_hasTitle_logo_1800x1000.png": {"gp", none},
+	"./google_apple_feed/psd/g_hasTitle_logo_1800x1000.psd": {"gp", none},
 
 	"./google_apple_feed/jpg/g_iconic_poster_600x600.jpg":       {"gp", 2*mb},
 	"./google_apple_feed/psd/g_iconic_poster_600x600.psd":       {"gp", none},
