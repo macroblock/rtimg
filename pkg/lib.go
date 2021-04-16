@@ -233,6 +233,12 @@ func (o *TKey) Base() string {
 	return o.segments[len(o.segments)-1]
 }
 
+func (o *TKey) String() string {
+	if o == nil {
+		return fmt.Sprintf("%v", nil)
+	}
+	return fmt.Sprintf("name: %v, size: %v, level: %v, segments: %v", o.name, o.size, o.level, o.segments)
+}
 
 func makeNameUsingTags(tn ITagname) (string, error) {
 	nameTags := []string{"name", "sxx", "sname", "exx", "ename", "comment", "year", "sdhd"}
@@ -281,7 +287,7 @@ func tryToFindKey(path string, name string) (*TKey, error) {
 		if key.NextLevel() {
 			continue
 		}
-		return nil, fmt.Errorf("<key> not found")
+		return nil, fmt.Errorf("tryToFindKey(): <key> not found %v", key)
 	}
 }
 
