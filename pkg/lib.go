@@ -69,13 +69,13 @@ var postersTable = map[string] TKeyData {
 	"./1080x540.jpg":         {"gp", 700*kb},
 	"./1080x540.psd":         {"gp", none},
 	// megafon
-	"./1080x810.png":         {"gp", 8*mb},
+	"./1080x810.png":         {"gp", 6*mb},
 	"./1080x810.psd":         {"gp", none},
-	"./1080x1232.png":        {"gp", 8*mb},
+	"./1080x1232.png":        {"gp", 6*mb},
 	"./1080x1232.psd":        {"gp", none},
-	"./1104x624.png":         {"gp", 8*mb},
+	"./1104x624.png":         {"gp", 6*mb},
 	"./1104x624.psd":         {"gp", none},
-	"./3840x1344.png":        {"gp", 8*mb},
+	"./3840x1344.png":        {"gp", 6*mb},
 	"./3840x1344.psd":        {"gp", none},
 
 	"./google_apple_feed/jpg/g_hasLogo_600x600.png":        {"gp", none},
