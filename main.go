@@ -12,6 +12,7 @@ import (
 	"sync"
 	"unicode/utf8"
 
+	"github.com/macroblock/imed/pkg/misc"
 	"github.com/macroblock/imed/pkg/tagname"
 	"github.com/macroblock/rtimg/pkg"
 
@@ -49,9 +50,13 @@ func main() {
 	files = flag.Args()
 	length = len(files)
 
-
 	if clipboard.Unsupported {
 		appendError("--clipboard--", fmt.Errorf("clipboard unsupported for the OS"))
+	}
+
+	if err := misc.CommandExists("ffmpeg", "exiftool", "pngquant"); err != nil {
+		fmt.Printf("fatal error: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Create channel for goroutines
