@@ -124,12 +124,12 @@ func CheckImage(filePath string, tn ITagname) (*TKeyData, error) {
 	return data, nil
 }
 
-func GetProjectDir(filePath string) (string, error) {
-	key, err := FindKey(filePath, nil)
-	if err != nil {
-		return "", err
+func GetProjectDir(filePath string) string {
+	key, _ := FindKey(filePath, nil)
+	if key == nil {
+		return ""
 	}
-	return key.ProjectDir(), nil
+	return key.ProjectDir()
 }
 
 // FindKey - tagname will be used only if it failed to find <key> for the path
@@ -137,6 +137,9 @@ func FindKey(path string, tn ITagname) (*TKey, error) {
 	name := ""
 	key, err := tryToFindKey(path, name)
 	if err != nil {
+		if tn == nil {
+			return nil, fmt.Errorf("findKey: tagname is <nil>")
+		}
 		// check if the pointer over interface is nil
 		if tn.State() != nil {
 			return nil, fmt.Errorf("findKey: <key> not found")

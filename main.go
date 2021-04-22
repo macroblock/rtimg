@@ -330,7 +330,7 @@ func appendError(filename string, err error) {
 }
 
 func setError(path string, err error) {
-	projectDir, err := rtimg.GetProjectDir(path)
+	projectDir := rtimg.GetProjectDir(path)
 	if projectDir == "" {
 		projectDir = filepath.Dir(path)
 	}
