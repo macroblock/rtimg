@@ -6,7 +6,8 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	// "regexp"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -32,14 +33,58 @@ var length int           // Store the amount of input files in global space.
 var threads int
 var flagDoReduceSize bool
 var flagRecursive bool
+var flagNameFileRe string
+var nameFileRe *regexp.Regexp
 
 var wg sync.WaitGroup
+
+///////////////////////////////////////////////////////////////////////////////
+type RootDirData struct {
+	From string
+	To string
+	WasErrors bool
+}
+var rootDirMap = map[string]RootDirData{}
+var rootDirMutex = &sync.Mutex{}
+
+func rootDirSetName(dir string, name string) error {
+	err := error(nil)
+	hash := strings.ReplaceAll(dir, "\\", "/")
+	rootDirMutex.Lock()
+	defer rootDirMutex.Unlock()
+	data, ok := rootDirMap[hash]
+	if ok && data.To != "" {
+		err = fmt.Errorf("duplicate directory to rename it %q -> %q", dir, name)
+		data.WasErrors = true
+	}
+	data.From = dir
+	data.To = name
+	rootDirMap[hash] = data
+	return err
+}
+
+func rootDirSetError(dir string, err error) {
+	if err == nil {
+		return
+	}
+	hash := strings.ReplaceAll(dir, "\\", "/")
+	rootDirMutex.Lock()
+	defer rootDirMutex.Unlock()
+	data := rootDirMap[hash]
+	if data.From == "" {
+		data.From = dir
+	}
+	data.WasErrors = true
+	rootDirMap[hash] = data
+}
+///////////////////////////////////////////////////////////////////////////////
 
 func main() {
 	// Parse input flags.
 	flag.IntVar(&threads, "t", 4, "Number of threads")
 	flag.BoolVar(&flagRecursive, "d", false, "Recursive walk directories (skip symlinks)")
 	flag.BoolVar(&flagDoReduceSize, "s", false, "Reduce size of the images")
+	flag.StringVar(&flagNameFileRe, "n", "", "regexp that has in the first group (cannot be an empty string) a result to rename the directory")
 
 	flag.Usage = func() {
 		ansi.Println("Usage: rtimg [options] [file1 file2 ...]")
@@ -49,6 +94,10 @@ func main() {
 
 	files = flag.Args()
 	length = len(files)
+
+	if flagNameFileRe != "" {
+		nameFileRe = regexp.MustCompile(flagNameFileRe)
+	}
 
 	if clipboard.Unsupported {
 		appendError("--clipboard--", fmt.Errorf("clipboard unsupported for the OS"))
@@ -74,7 +123,7 @@ func main() {
 			c <- filePath
 			continue
 		}
-		list, err := rtimg.WalkPath(filePath)
+		list, err := WalkPath(filePath)
 		if err != nil {
 			appendError(filePath, err)
 		}
@@ -84,6 +133,33 @@ func main() {
 	}
 	close(c)
 	wg.Wait()
+
+	// rename directories
+	dirlist := []RootDirData{}
+	for _, v := range rootDirMap {
+		dirlist = append(dirlist, v)
+	}
+	sort.Slice(dirlist, func(i, j int) bool {
+		return len(dirlist[i].From) > len(dirlist[j].From)
+	})
+	errlist := []string{}
+	for _, v := range dirlist {
+		if v.WasErrors {
+			errlist = append(errlist,
+				fmt.Sprintf("%v: was errors", v.From))
+			continue
+		}
+		if v.From == "" || v.To == "" {
+			errlist = append(errlist,
+				fmt.Sprintf("%v: unreachable", v.From))
+		}
+		err := os.Rename(v.From, v.To)
+		if err != nil {
+			errlist = append(errlist,
+				fmt.Sprintf("%v: rename: %v", v.From, err))
+		}
+	}
+	errorsArray = append(errorsArray, errlist...)
 
 	// If there were any errors.
 	if len(errorsArray) > 0 {
@@ -103,65 +179,103 @@ func main() {
 	}
 }
 
+func WalkPath(path string) ([]string, error) {
+	ret := []string{}
+	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		// check if it is the specified filename that contains a name to rename the directory
+		if nameFileRe != nil {
+			filename := filepath.Base(path)
+			dir := filepath.Dir(path)
+			val := nameFileRe.FindAllStringSubmatch(filename, -1)
+			if val != nil && len(val) == 1 && len(val[0]) == 2 && val[0][1] != "" {
+				err := rootDirSetName(dir, val[0][1])
+				if err != nil {
+					printError(dir, err)
+					return nil
+				}
+			}
+			if val != nil {
+				printError(path, fmt.Errorf("incorrect result of regexp %q", flagNameFileRe))
+				return nil
+			}
+		}
+		ret = append(ret, path)
+		return nil
+	})
+
+	return ret, err
+}
+
 func worker(c chan string) {
 	defer wg.Done()
 	for filePath := range c {
-		fileNamePath := filePath
-		fileName := filepath.Base(filePath)
-		filePath, err := filepath.Abs(filePath)
-		if err != nil {
-			printError(fileNamePath, err)
-			continue
-		}
+		workerProcess(filePath)
+	}
+}
 
-		mtx.Lock()
-		// !!!TODO!!! something with deep check
-		tn, err := tagname.NewFromFilename(filePath, true)
-		mtx.Unlock()
-		if err != nil {
-			tn = nil
-		}
-		data, err := rtimg.CheckImage(filePath, tn)
-		if err != nil {
-			printError(fileNamePath, err)
-			continue
-		}
-		sizeLimit := data.FileSizeLimit
-		if sizeLimit < 0 {
-			printGreen(fileName, "Ok")
-			continue
-		}
+func workerProcess(filePath string) {
+	fileNamePath := filePath
+	fileName := filepath.Base(filePath)
+	filePath, err := filepath.Abs(filePath)
+	if err != nil {
+		printError(fileNamePath, err)
+		return
+	}
 
-		inputSize, err := rtimg.GetFileSize(filePath)
-		if err != nil {
-			printError(fileNamePath, err)
-			continue
-		}
+	mtx.Lock()
+	// !!!TODO!!! something with deep check
+	tn, err := tagname.NewFromFilename(filePath, true)
+	mtx.Unlock()
+	if err != nil {
+		tn = nil
+	}
+	data, err := rtimg.CheckImage(filePath, tn)
+	if err != nil {
+		printError(fileNamePath, err)
+		return
+	}
+	sizeLimit := data.FileSizeLimit
+	if sizeLimit < 0 {
+		// RenameRootDir(filePath)
+		printGreen(fileName, "Ok")
+		return
+	}
 
-		if !flagDoReduceSize {
-			if inputSize > sizeLimit {
-				printError(fileNamePath, fmt.Errorf("%v KB > %v KB", inputSize/1000, sizeLimit/1000))
-			} else {
-				printGreen(fileName, "Ok")
-			}
-			continue
-		}
+	inputSize, err := rtimg.GetFileSize(filePath)
+	if err != nil {
+		printError(fileNamePath, err)
+		return
+	}
 
-		outputSize, q, err := rtimg.ReduceImage(filePath, data.FileSizeLimit)
-		if err != nil {
-			printError(fileNamePath, err)
-			continue
-		}
-		if inputSize == outputSize {
-			printGreen(fileName, "Ok")
-			continue
-		}
-		msg := fmt.Sprintf("%v KB < %v KB, q: %v d: %v", outputSize/1000, sizeLimit/1000, q, inputSize-outputSize)
-		if q > 13 { // !!!FIXME: empirical value
-			printMagenta(fileName, msg)
+	if !flagDoReduceSize {
+		if inputSize > sizeLimit {
+			printError(fileNamePath, fmt.Errorf("%v KB > %v KB", inputSize/1000, sizeLimit/1000))
 		} else {
-			printYellow(fileName, msg)
+			printGreen(fileName, "Ok")
 		}
+		return
+	}
+
+	outputSize, q, err := rtimg.ReduceImage(filePath, data.FileSizeLimit)
+	if err != nil {
+		printError(fileNamePath, err)
+		return
+	}
+	if inputSize == outputSize {
+		printGreen(fileName, "Ok")
+		return
+	}
+	msg := fmt.Sprintf("%v KB < %v KB, q: %v d: %v", outputSize/1000, sizeLimit/1000, q, inputSize-outputSize)
+	if q > 13 { // !!!FIXME: empirical value
+		printMagenta(fileName, msg)
+	} else {
+		printYellow(fileName, msg)
 	}
 }
 
@@ -214,6 +328,7 @@ func appendError(filename string, err error) {
 }
 
 func printError(filename string, err error) {
+	rootDirSetError(filename, err)
 	appendError(filename, err)
 	printColor(31, false, filepath.Base(filename), err.Error())
 }

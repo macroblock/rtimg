@@ -71,13 +71,21 @@ func TestIncorrect(t *testing.T) {
 
 //TestKey -
 func TestKey(t *testing.T) {
-	path :=	"PROJECT_NAME/google_apple_feed/jpg/g_iconic_poster_600x800.jpg"
+	projectDir := "some/path/PROJECT_NAME"
+	path :=	projectDir + "/google_apple_feed/jpg/g_iconic_poster_600x800.jpg"
 	// key := newKey(path, "")
 	key, err := rtimg.FindKey(path, nil)
 	if err != nil {
 		t.Errorf("TestKey: %v", err)
 		return
 	}
+	s := key.ProjectDir()
+	if s != projectDir {
+		t.Errorf("TestKey incorrect project dir: "+projectDir+" != "+s)
+		return
+	}
+
+
 	hash := key.Hash()
 	if hash != "./google_apple_feed/jpg/g_iconic_poster_600x800.jpg" {
 		t.Errorf("TestKey: invalid hash %v", hash)

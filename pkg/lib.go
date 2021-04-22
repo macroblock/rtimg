@@ -2,7 +2,7 @@ package rtimg
 
 import (
 	"fmt"
-	"os"
+	// "os"
 	"regexp"
 	"path/filepath"
 	"strings"
@@ -112,22 +112,6 @@ func init() {
 	// fmt.Printf("debug: valid extensions: %v\n", validExtension)
 }
 
-func WalkPath(path string) ([]string, error) {
-	ret := []string{}
-	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
-		ret = append(ret, path)
-		return nil
-	})
-
-	return ret, err
-}
-
 func CheckImage(filePath string, tn ITagname) (*TKeyData, error) {
 	key, err := FindKey(filePath, tn)
 	if err != nil {
@@ -231,6 +215,14 @@ func (o *TKey) Size() string {
 
 func (o *TKey) Base() string {
 	return o.segments[len(o.segments)-1]
+}
+
+func (o *TKey) ProjectDir() string {
+	idx := len(o.segments)-1-o.level
+	if idx < 1 {
+		return ""
+	}
+	return strings.Join(o.segments[:idx], "/")
 }
 
 func (o *TKey) String() string {
