@@ -71,14 +71,19 @@ func rootDirSetError(dir string, err error) string {
 	rootDirMutex.Lock()
 	defer rootDirMutex.Unlock()
 	data, ok := rootDirMap[hash]
+	origDir := dir
 	oldDir := dir
 	for !ok {
 		dir = filepath.Dir(dir)
 		if dir == oldDir {
-			return ""
+			dir = filepath.Dir(origDir)
+			hash := strings.ReplaceAll(dir, "\\", "/")
+			data, ok = rootDirMap[hash]
+			break
 		}
 		hash := strings.ReplaceAll(dir, "\\", "/")
 		data, ok = rootDirMap[hash]
+		oldDir = dir
 	}
 	if data.From == "" {
 		data.From = dir
@@ -154,6 +159,7 @@ func main() {
 	})
 
 	// debug print -
+	fmt.Println("xxx debug len:", len(dirlist))
 	for i, v := range dirlist {
 		fmt.Println("xxxxxx", i, "-", v)
 	}
