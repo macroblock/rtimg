@@ -63,19 +63,29 @@ func rootDirSetName(dir string, name string) error {
 	return err
 }
 
-func rootDirSetError(dir string, err error) {
+func rootDirSetError(dir string, err error) string {
 	if err == nil {
-		return
+		return ""
 	}
 	hash := strings.ReplaceAll(dir, "\\", "/")
 	rootDirMutex.Lock()
 	defer rootDirMutex.Unlock()
-	data := rootDirMap[hash]
+	data, ok := rootDirMap[hash]
+	oldDir := dir
+	for !ok {
+		dir = filepath.Dir(dir)
+		if dir == oldDir {
+			return ""
+		}
+		hash := strings.ReplaceAll(dir, "\\", "/")
+		data, ok = rootDirMap[hash]
+	}
 	if data.From == "" {
 		data.From = dir
 	}
 	data.WasErrors = true
 	rootDirMap[hash] = data
+	return dir
 }
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -143,8 +153,9 @@ func main() {
 		return len(dirlist[i].From) > len(dirlist[j].From)
 	})
 
+	// debug print -
 	for i, v := range dirlist {
-		fmt.Println(i,"-", v)
+		fmt.Println("xxxxxx", i, "-", v)
 	}
 
 	errlist := []string{}
@@ -335,11 +346,11 @@ func appendError(filename string, err error) {
 }
 
 func setError(path string, err error) {
-	projectDir := rtimg.GetProjectDir(path)
-	if projectDir == "" {
-		projectDir = filepath.Dir(path)
-	}
-	rootDirSetError(projectDir, err)
+	// projectDir := rtimg.GetProjectDir(path)
+	// if projectDir == "" {
+		// projectDir = filepath.Dir(path)
+	// }
+	projectDir := rootDirSetError(path, err)
 	appendError(path, err)
 	printColor(31, false, filepath.Base(path), "#"+projectDir+"#"+err.Error())
 }
