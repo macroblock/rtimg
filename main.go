@@ -142,6 +142,11 @@ func main() {
 	sort.Slice(dirlist, func(i, j int) bool {
 		return len(dirlist[i].From) > len(dirlist[j].From)
 	})
+
+	for i, v := range dirlist {
+		fmt.Println(i,"-", v)
+	}
+
 	errlist := []string{}
 	for _, v := range dirlist {
 		if v.WasErrors {
@@ -336,7 +341,7 @@ func setError(path string, err error) {
 	}
 	rootDirSetError(projectDir, err)
 	appendError(path, err)
-	printColor(31, false, filepath.Base(path), err.Error())
+	printColor(31, false, filepath.Base(path), "#"+projectDir+"#"+err.Error())
 }
 
 func printYellow(filename, message string) {
