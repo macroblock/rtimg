@@ -124,6 +124,14 @@ func CheckImage(filePath string, tn ITagname) (*TKeyData, error) {
 	return data, nil
 }
 
+func GetProjectDir(filePath string) (string, error) {
+	key, err := FindKey(filePath, nil)
+	if err != nil {
+		return "", err
+	}
+	return key.ProjectDir(), nil
+}
+
 // FindKey - tagname will be used only if it failed to find <key> for the path
 func FindKey(path string, tn ITagname) (*TKey, error) {
 	name := ""

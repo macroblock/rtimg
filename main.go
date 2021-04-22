@@ -196,12 +196,12 @@ func WalkPath(path string) ([]string, error) {
 			if val != nil && len(val) == 1 && len(val[0]) == 2 && val[0][1] != "" {
 				err := rootDirSetName(dir, val[0][1])
 				if err != nil {
-					printError(dir, err)
+					setError(dir, err)
 				}
 				return nil
 			}
 			if val != nil {
-				printError(path, fmt.Errorf("incorrect result of regexp %q", flagNameFileRe))
+				setError(path, fmt.Errorf("incorrect result of regexp %q", flagNameFileRe))
 				return nil
 			}
 		}
@@ -224,7 +224,7 @@ func workerProcess(filePath string) {
 	fileName := filepath.Base(filePath)
 	filePath, err := filepath.Abs(filePath)
 	if err != nil {
-		printError(fileNamePath, err)
+		setError(fileNamePath, err)
 		return
 	}
 
@@ -235,11 +235,13 @@ func workerProcess(filePath string) {
 	if err != nil {
 		tn = nil
 	}
+
 	data, err := rtimg.CheckImage(filePath, tn)
 	if err != nil {
-		printError(fileNamePath, err)
+		setError(fileNamePath, err)
 		return
 	}
+
 	sizeLimit := data.FileSizeLimit
 	if sizeLimit < 0 {
 		// RenameRootDir(filePath)
@@ -249,13 +251,13 @@ func workerProcess(filePath string) {
 
 	inputSize, err := rtimg.GetFileSize(filePath)
 	if err != nil {
-		printError(fileNamePath, err)
+		setError(fileNamePath, err)
 		return
 	}
 
 	if !flagDoReduceSize {
 		if inputSize > sizeLimit {
-			printError(fileNamePath, fmt.Errorf("%v KB > %v KB", inputSize/1000, sizeLimit/1000))
+			setError(fileNamePath, fmt.Errorf("%v KB > %v KB", inputSize/1000, sizeLimit/1000))
 		} else {
 			printGreen(fileName, "Ok")
 		}
@@ -264,7 +266,7 @@ func workerProcess(filePath string) {
 
 	outputSize, q, err := rtimg.ReduceImage(filePath, data.FileSizeLimit)
 	if err != nil {
-		printError(fileNamePath, err)
+		setError(fileNamePath, err)
 		return
 	}
 	if inputSize == outputSize {
@@ -327,10 +329,14 @@ func appendError(filename string, err error) {
 		filepath.Base(filename) + " ->\x1b[35m" + filepath.Dir(filename))
 }
 
-func printError(filename string, err error) {
-	rootDirSetError(filename, err)
-	appendError(filename, err)
-	printColor(31, false, filepath.Base(filename), err.Error())
+func setError(path string, err error) {
+	projectDir, err := rtimg.GetProjectDir(path)
+	if projectDir == "" {
+		projectDir = filepath.Dir(path)
+	}
+	rootDirSetError(projectDir, err)
+	appendError(path, err)
+	printColor(31, false, filepath.Base(path), err.Error())
 }
 
 func printYellow(filename, message string) {
