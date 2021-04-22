@@ -197,8 +197,8 @@ func WalkPath(path string) ([]string, error) {
 				err := rootDirSetName(dir, val[0][1])
 				if err != nil {
 					printError(dir, err)
-					return nil
 				}
+				return nil
 			}
 			if val != nil {
 				printError(path, fmt.Errorf("incorrect result of regexp %q", flagNameFileRe))
