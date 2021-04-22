@@ -34,6 +34,7 @@ var threads int
 var flagDoReduceSize bool
 var flagRecursive bool
 var flagNameFileRe string
+var flagDontUseNameFile bool
 var nameFileRe *regexp.Regexp
 
 var wg sync.WaitGroup
@@ -100,6 +101,7 @@ func main() {
 	flag.BoolVar(&flagRecursive, "d", false, "Recursive walk directories (skip symlinks)")
 	flag.BoolVar(&flagDoReduceSize, "s", false, "Reduce size of the images")
 	flag.StringVar(&flagNameFileRe, "n", "", "regexp that has in the first group (cannot be an empty string) a result to rename the directory")
+	flag.BoolVar(&flagDontUseNameFile, "N", false, "do not rename directories")
 
 	flag.Usage = func() {
 		ansi.Println("Usage: rtimg [options] [file1 file2 ...]")
@@ -152,7 +154,9 @@ func main() {
 	// rename directories
 	dirlist := []RootDirData{}
 	for k, v := range rootDirMap {
-		fmt.Println("xxxxxx map:", k, "-", v)
+		// // debug print
+		// fmt.Println("xxxxxx map:", k, "-", v)
+		_ = k
 		dirlist = append(dirlist, v)
 	}
 	sort.Slice(dirlist, func(i, j int) bool {
@@ -175,6 +179,9 @@ func main() {
 		if v.From == "" || v.To == "" {
 			errlist = append(errlist,
 				fmt.Sprintf("%v: unreachable", v.From))
+		}
+		if flagDontUseNameFile {
+			continue
 		}
 		err := os.Rename(v.From, v.To)
 		if err != nil {
@@ -358,8 +365,9 @@ func setError(path string, err error) {
 		// projectDir = filepath.Dir(path)
 	// }
 	projectDir := rootDirSetError(path, err)
+	_ = projectDir
 	appendError(path, err)
-	printColor(31, false, filepath.Base(path), "#"+projectDir+"#"+err.Error())
+	printColor(31, false, filepath.Base(path), err.Error())
 }
 
 func printYellow(filename, message string) {
