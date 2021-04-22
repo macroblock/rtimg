@@ -151,7 +151,8 @@ func main() {
 
 	// rename directories
 	dirlist := []RootDirData{}
-	for _, v := range rootDirMap {
+	for k, v := range rootDirMap {
+		fmt.Println("xxxxxx map:", k, "-", v)
 		dirlist = append(dirlist, v)
 	}
 	sort.Slice(dirlist, func(i, j int) bool {
@@ -159,10 +160,10 @@ func main() {
 	})
 
 	// debug print -
-	fmt.Println("xxx debug len:", len(dirlist))
-	for i, v := range dirlist {
-		fmt.Println("xxxxxx", i, "-", v)
-	}
+	// fmt.Println("xxx debug len:", len(dirlist))
+	// for i, v := range dirlist {
+		// fmt.Println("xxxxxx", i, "-", v)
+	// }
 
 	errlist := []string{}
 	for _, v := range dirlist {
