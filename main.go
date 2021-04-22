@@ -77,11 +77,11 @@ func rootDirSetError(dir string, err error) string {
 		dir = filepath.Dir(dir)
 		if dir == oldDir {
 			dir = filepath.Dir(origDir)
-			hash := strings.ReplaceAll(dir, "\\", "/")
+			hash = strings.ReplaceAll(dir, "\\", "/")
 			data, ok = rootDirMap[hash]
 			break
 		}
-		hash := strings.ReplaceAll(dir, "\\", "/")
+		hash = strings.ReplaceAll(dir, "\\", "/")
 		data, ok = rootDirMap[hash]
 		oldDir = dir
 	}
