@@ -80,8 +80,6 @@ var postersTable = map[string] TKeyData {
 
 	"./google_apple_feed/jpg/g_hasLogo_600x600.png":        {"gp", none},
 	"./google_apple_feed/psd/g_hasLogo_600x600.psd":        {"gp", none},
-	"./google_apple_feed/jpg/g_hasLogo_600x800.png":        {"gp", none},
-	"./google_apple_feed/psd/g_hasLogo_600x800.psd":	{"gp", none},
 	"./google_apple_feed/jpg/g_hasTitle_logo_1800x1000.png":{"gp", none},
 	"./google_apple_feed/psd/g_hasTitle_logo_1800x1000.psd":{"gp", none},
 
