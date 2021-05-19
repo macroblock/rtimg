@@ -153,10 +153,21 @@ func pngQuant(filePath string, output string) error {
 }
 
 func exifTool(filePath string) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	path, name := filepath.Split(filePath)
+	err = os.Chdir(path)
+	if err != nil {
+		return err
+	}
+	defer os.Chdir(cwd)
+
 	// Run pngquant to reduce the file size of input PNG file with lossy compression.
 	stdoutStderr, err := exec.Command("exiftool",
 		"-overwrite_original",
-		"-all=", filePath,
+		"-all=", name,
 	).CombinedOutput()
 	if err != nil {
 		// return err
