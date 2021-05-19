@@ -162,16 +162,20 @@ func exifTool(filePath string) error {
 	if err != nil {
 		return err
 	}
-	defer os.Chdir(cwd)
 
 	// Run pngquant to reduce the file size of input PNG file with lossy compression.
 	stdoutStderr, err := exec.Command("exiftool",
+		"-charset filename=UTF8",
 		"-overwrite_original",
 		"-all=", name,
 	).CombinedOutput()
+	e := os.Chdir(cwd)
 	if err != nil {
 		// return err
 		return fmt.Errorf("error: %s\ndata:\n%q", err.Error(), string(stdoutStderr))
+	}
+	if e != nil {
+		return e
 	}
 	return nil
 }
