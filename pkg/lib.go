@@ -288,7 +288,7 @@ func tryToFindKey(path string, name string) (*TKey, error) {
 		if key.NextLevel() {
 			continue
 		}
-		return nil, fmt.Errorf("tryToFindKey(): <key> not found", key)
+		return nil, fmt.Errorf("tryToFindKey(): <key> not found %v", key)
 	}
 }
 
