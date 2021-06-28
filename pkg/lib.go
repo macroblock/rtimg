@@ -78,6 +78,16 @@ var postersTable = map[string] TKeyData {
 	"./3840x1344.png":        {"gp", 6*mb},
 	"./3840x1344.psd":        {"gp", none},
 
+	// viasat
+	"./для сервиса/600x600.jpg":   {"gp", 3*mb},
+	"./для сервиса/600x600.psd":   {"gp", none},
+	"./для сервиса/600x840.jpg":   {"gp", 3*mb},
+	"./для сервиса/600x840.psd":   {"gp", none},
+	"./для сервиса/1920x1080.jpg": {"gp", 3*mb},
+	"./для сервиса/1920x1080.psd": {"gp", none},
+	"./для сервиса/1760x557.jpg":  {"gp", 3*mb},
+	"./для сервиса/1760x557.psd":  {"gp", none},
+
 	"./google_apple_feed/jpg/g_hasLogo_600x600.png":        {"gp", none},
 	"./google_apple_feed/psd/g_hasLogo_600x600.psd":        {"gp", none},
 	"./google_apple_feed/jpg/g_hasTitle_logo_1800x1000.png":{"gp", none},
