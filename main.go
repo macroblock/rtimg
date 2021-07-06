@@ -17,8 +17,8 @@ import (
 	"github.com/macroblock/imed/pkg/tagname"
 	"github.com/macroblock/rtimg/pkg"
 
-	ansi "github.com/malashin/go-ansi"
 	"github.com/atotto/clipboard"
+	ansi "github.com/malashin/go-ansi"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -41,10 +41,11 @@ var wg sync.WaitGroup
 
 ///////////////////////////////////////////////////////////////////////////////
 type RootDirData struct {
-	From string
-	To string
+	From      string
+	To        string
 	WasErrors bool
 }
+
 var rootDirMap = map[string]RootDirData{}
 var rootDirMutex = &sync.Mutex{}
 
@@ -93,6 +94,7 @@ func rootDirSetError(dir string, err error) string {
 	rootDirMap[hash] = data
 	return dir
 }
+
 ///////////////////////////////////////////////////////////////////////////////
 
 func main() {
@@ -166,7 +168,7 @@ func main() {
 	// debug print -
 	// fmt.Println("xxx debug len:", len(dirlist))
 	// for i, v := range dirlist {
-		// fmt.Println("xxxxxx", i, "-", v)
+	// fmt.Println("xxxxxx", i, "-", v)
 	// }
 
 	errlist := []string{}
@@ -343,7 +345,7 @@ func printColor(color int, isOk bool, filename, message string) {
 		sign = "+"
 	}
 	c := strconv.Itoa(color)
-	ansi.Println("\x1b[" + c + ";1m" + sign + " " + countPad() + "/" + strconv.Itoa(length) +  "\x1b[0m " + truncPad(filename, 50, 'r') + " \x1b[" + c + ";1m" + message + "\x1b[0m")
+	ansi.Println("\x1b[" + c + ";1m" + sign + " " + countPad() + "/" + strconv.Itoa(length) + "\x1b[0m " + truncPad(filename, 50, 'r') + " \x1b[" + c + ";1m" + message + "\x1b[0m")
 	mtx.Unlock()
 }
 
@@ -355,14 +357,14 @@ func appendError(filename string, err error) {
 	if err == nil {
 		return
 	}
-	errorsArray = append(errorsArray, "\x1b[31;1m" + err.Error() + "\x1b[0m " +
-		filepath.Base(filename) + " ->\x1b[35m" + filepath.Dir(filename))
+	errorsArray = append(errorsArray, "\x1b[31;1m"+err.Error()+"\x1b[0m "+
+		filepath.Base(filename)+" ->\x1b[35m"+filepath.Dir(filename))
 }
 
 func setError(path string, err error) {
 	// projectDir := rtimg.GetProjectDir(path)
 	// if projectDir == "" {
-		// projectDir = filepath.Dir(path)
+	// projectDir = filepath.Dir(path)
 	// }
 	projectDir := rootDirSetError(path, err)
 	_ = projectDir

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/macroblock/imed/pkg/tagname"
-	"github.com/macroblock/rtimg/pkg"
+	rtimg "github.com/macroblock/rtimg/pkg"
 )
 
 var (
@@ -72,7 +72,8 @@ func TestIncorrect(t *testing.T) {
 //TestKey -
 func TestKey(t *testing.T) {
 	projectDir := "some/path/PROJECT_NAME"
-	path :=	projectDir + "/google_apple_feed/jpg/g_iconic_poster_600x800.jpg"
+	projectLeaf := "/google_apple_feed/jpg/g_iconic_poster_600x800.jpg"
+	path := projectDir + projectLeaf
 	// key := newKey(path, "")
 	key, err := rtimg.FindKey(path, nil)
 	if err != nil {
@@ -81,16 +82,41 @@ func TestKey(t *testing.T) {
 	}
 	s := key.ProjectDir()
 	if s != projectDir {
-		t.Errorf("TestKey incorrect project dir: "+projectDir+" != "+s)
+		t.Errorf("TestKey incorrect project dir: " + projectDir + " != " + s)
 		return
 	}
 
-
 	hash := key.Hash()
-	if hash != "./google_apple_feed/jpg/g_iconic_poster_600x800.jpg" {
+	if hash != "."+projectLeaf {
 		t.Errorf("TestKey: invalid hash %v", hash)
 	}
 	name := key.Name()
+	if name != "PROJECT_NAME" {
+		t.Errorf("TestKey: invalid name %v", name)
+	}
+
+	// -------------------------------------------
+
+	projectDir = "some/path/PROJECT_NAME"
+	projectLeaf = "/для сервиса/600x600.jpg"
+	path = projectDir + projectLeaf
+	// key := newKey(path, "")
+	key, err = rtimg.FindKey(path, nil)
+	if err != nil {
+		t.Errorf("TestKey: %v", err)
+		return
+	}
+	s = key.ProjectDir()
+	if s != projectDir {
+		t.Errorf("TestKey incorrect project dir: " + projectDir + " != " + s)
+		return
+	}
+
+	hash = key.Hash()
+	if hash != "."+projectLeaf {
+		t.Errorf("TestKey: invalid hash %v", hash)
+	}
+	name = key.Name()
 	if name != "PROJECT_NAME" {
 		t.Errorf("TestKey: invalid name %v", name)
 	}

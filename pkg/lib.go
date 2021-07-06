@@ -3,8 +3,8 @@ package rtimg
 import (
 	"fmt"
 	// "os"
-	"regexp"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -20,7 +20,7 @@ type (
 		// filename's size tag. ("800x600" for example)
 		size string
 		// index starting from last segment
-		level int
+		level    int
 		segments []string
 	}
 	TKeyData struct {
@@ -31,81 +31,85 @@ type (
 
 const (
 	none = -1
-	kb = 1000
-	mb = kb*1000
-	gb = mb*1000
+	kb   = 1000
+	mb   = kb * 1000
+	gb   = mb * 1000
 )
 
-var validExtension = map[string]bool {}
+var validExtension = map[string]bool{}
 
-var postersTable = map[string] TKeyData {
-	"./350x500.jpg":  {"rt", 1*mb},
+var cannotBeProjectName = []string{
+	"./для сервиса/",
+}
+
+var postersTable = map[string]TKeyData{
+	"./350x500.jpg":  {"rt", 1 * mb},
 	"./350x500.psd":  {"rt", none},
-	"./525x300.jpg":  {"rt", 1*mb},
+	"./525x300.jpg":  {"rt", 1 * mb},
 	"./525x300.psd":  {"rt", none},
-	"./810x498.jpg":  {"rt", 1*mb},
+	"./810x498.jpg":  {"rt", 1 * mb},
 	"./810x498.psd":  {"rt", none},
-	"./270x390.jpg":  {"rt", 1*mb},
+	"./270x390.jpg":  {"rt", 1 * mb},
 	"./270x390.psd":  {"rt", none},
-	"./1620x996.jpg": {"rt", 1*mb},
+	"./1620x996.jpg": {"rt", 1 * mb},
 	"./1620x996.psd": {"rt", none},
-	"./503x726.jpg":  {"rt", 1*mb},
+	"./503x726.jpg":  {"rt", 1 * mb},
 	"./503x726.psd":  {"rt", none},
-	"./logo.png":     {"rt", 1*mb},
+	"./logo.png":     {"rt", 1 * mb},
 	"./logo.psd":     {"rt", none},
 
-	"./600x600.jpg":          {"gp", 700*kb},
+	"./600x600.jpg":          {"gp", 700 * kb},
 	"./600x600.psd":          {"gp", none},
-	"./600x840.jpg":          {"gp", 700*kb},
+	"./600x840.jpg":          {"gp", 700 * kb},
 	"./600x840.psd":          {"gp", none},
-	"./1920x1080.jpg":        {"gp", 700*kb},
+	"./1920x1080.jpg":        {"gp", 700 * kb},
 	"./1920x1080.psd":        {"gp", none},
-	"./1920x1080_left.jpg":   {"gp", 700*kb},
+	"./1920x1080_left.jpg":   {"gp", 700 * kb},
 	"./1920x1080_left.psd":   {"gp", none},
-	"./1920x1080_center.jpg": {"gp", 700*kb},
+	"./1920x1080_center.jpg": {"gp", 700 * kb},
 	"./1920x1080_center.psd": {"gp", none},
-	"./1260x400.jpg":         {"gp", 700*kb},
+	"./1260x400.jpg":         {"gp", 700 * kb},
 	"./1260x400.psd":         {"gp", none},
-	"./1080x540.jpg":         {"gp", 700*kb},
+	"./1080x540.jpg":         {"gp", 700 * kb},
 	"./1080x540.psd":         {"gp", none},
 	// megafon
-	"./1080x810.png":         {"gp", 6*mb},
-	"./1080x810.psd":         {"gp", none},
-	"./1080x1232.png":        {"gp", 6*mb},
-	"./1080x1232.psd":        {"gp", none},
-	"./1104x624.png":         {"gp", 6*mb},
-	"./1104x624.psd":         {"gp", none},
-	"./3840x1344.png":        {"gp", 6*mb},
-	"./3840x1344.psd":        {"gp", none},
+	"./1080x810.png":  {"gp", 6 * mb},
+	"./1080x810.psd":  {"gp", none},
+	"./1080x1232.png": {"gp", 6 * mb},
+	"./1080x1232.psd": {"gp", none},
+	"./1104x624.png":  {"gp", 6 * mb},
+	"./1104x624.psd":  {"gp", none},
+	"./3840x1344.png": {"gp", 6 * mb},
+	"./3840x1344.psd": {"gp", none},
 
 	// viasat
-	"./для сервиса/600x600.jpg":   {"gp", 3*mb},
+	"./для сервиса/600x600.jpg":   {"gp", 3 * mb},
 	"./для сервиса/600x600.psd":   {"gp", none},
-	"./для сервиса/600x840.jpg":   {"gp", 3*mb},
+	"./для сервиса/600x840.jpg":   {"gp", 3 * mb},
 	"./для сервиса/600x840.psd":   {"gp", none},
-	"./для сервиса/1920x1080.jpg": {"gp", 3*mb},
+	"./для сервиса/1920x1080.jpg": {"gp", 3 * mb},
 	"./для сервиса/1920x1080.psd": {"gp", none},
-	"./для сервиса/1760x557.jpg":  {"gp", 3*mb},
+	"./для сервиса/1760x557.jpg":  {"gp", 3 * mb},
 	"./для сервиса/1760x557.psd":  {"gp", none},
 
-	"./google_apple_feed/jpg/g_hasLogo_600x600.png":        {"gp", none},
-	"./google_apple_feed/psd/g_hasLogo_600x600.psd":        {"gp", none},
-	"./google_apple_feed/jpg/g_hasTitle_logo_1800x1000.png":{"gp", none},
-	"./google_apple_feed/psd/g_hasTitle_logo_1800x1000.psd":{"gp", none},
+	"./google_apple_feed/jpg/g_hasLogo_600x600.png":         {"gp", none},
+	"./google_apple_feed/psd/g_hasLogo_600x600.psd":         {"gp", none},
+	"./google_apple_feed/jpg/g_hasTitle_logo_1800x1000.png": {"gp", none},
+	"./google_apple_feed/psd/g_hasTitle_logo_1800x1000.psd": {"gp", none},
 
-	"./google_apple_feed/jpg/g_iconic_poster_600x600.jpg":       {"gp", 3*mb},
+	"./google_apple_feed/jpg/g_iconic_poster_600x600.jpg":       {"gp", 3 * mb},
 	"./google_apple_feed/psd/g_iconic_poster_600x600.psd":       {"gp", none},
-	"./google_apple_feed/jpg/g_iconic_poster_600x800.jpg":       {"gp", 3*mb},
+	"./google_apple_feed/jpg/g_iconic_poster_600x800.jpg":       {"gp", 3 * mb},
 	"./google_apple_feed/psd/g_iconic_poster_600x800.psd":       {"gp", none},
-	"./google_apple_feed/jpg/g_iconic_poster_800x600.jpg":       {"gp", 3*mb},
+	"./google_apple_feed/jpg/g_iconic_poster_800x600.jpg":       {"gp", 3 * mb},
 	"./google_apple_feed/psd/g_iconic_poster_800x600.psd":       {"gp", none},
-	"./google_apple_feed/jpg/g_iconic_poster_1000x1500.jpg":     {"gp", 3*mb},
+	"./google_apple_feed/jpg/g_iconic_poster_1000x1500.jpg":     {"gp", 3 * mb},
 	"./google_apple_feed/psd/g_iconic_poster_1000x1500.psd":     {"gp", none},
-	"./google_apple_feed/jpg/g_iconic_poster_3840x2160.jpg":     {"gp", 3*mb},
+	"./google_apple_feed/jpg/g_iconic_poster_3840x2160.jpg":     {"gp", 3 * mb},
 	"./google_apple_feed/psd/g_iconic_poster_3840x2160.psd":     {"gp", none},
-	"./google_apple_feed/jpg/g_iconic_background_1000x1500.jpg": {"gp", 3*mb},
+	"./google_apple_feed/jpg/g_iconic_background_1000x1500.jpg": {"gp", 3 * mb},
 	"./google_apple_feed/psd/g_iconic_background_1000x1500.psd": {"gp", none},
-	"./google_apple_feed/jpg/g_iconic_background_3840x2160.jpg": {"gp", 3*mb},
+	"./google_apple_feed/jpg/g_iconic_background_3840x2160.jpg": {"gp", 3 * mb},
 	"./google_apple_feed/psd/g_iconic_background_3840x2160.psd": {"gp", none},
 }
 
@@ -127,7 +131,7 @@ func CheckImage(filePath string, tn ITagname) (*TKeyData, error) {
 	}
 	data := key.Data()
 	if data == nil {
-		return  nil, fmt.Errorf("unreachable: something wrong with a <key>")
+		return nil, fmt.Errorf("unreachable: something wrong with a <key>")
 	}
 	return data, nil
 }
@@ -198,10 +202,10 @@ func (o *TKey) Hash() string {
 	if o.level < 0 || o.level >= len(o.segments) {
 		return ""
 	}
-	idx := len(o.segments)-1-o.level
+	idx := len(o.segments) - 1 - o.level
 	ret := strings.Join(o.segments[idx:], "/")
 	// fmt.Println("debug: ", ret)
-	return "./"+ret
+	return "./" + ret
 }
 
 func (o *TKey) NextLevel() bool {
@@ -216,15 +220,26 @@ func (o *TKey) Name() string {
 	if o.name != "" {
 		return o.name
 	}
-	ret, _ := o.Segment(len(o.segments)-2-o.level)
+	ret, _ := o.Segment(len(o.segments) - 2 - o.level)
 	// fmt.Printf("\ndebug: name: %q level %v segs: %v\n", o.name, o.level, strings.Join(o.segments, "/"))
 	return ret
 }
 
 func (o *TKey) Data() *TKeyData {
-	if ret, ok := postersTable[o.Hash()]; ok {
+	hash := o.Hash()
+	path := strings.TrimPrefix(hash, "./")
+
+	for _, prefix := range cannotBeProjectName {
+		h := prefix + path
+		if _, ok := postersTable[h]; ok {
+			return nil
+		}
+	}
+
+	if ret, ok := postersTable[hash]; ok {
 		return &ret
 	}
+
 	return nil
 }
 
@@ -237,7 +252,7 @@ func (o *TKey) Base() string {
 }
 
 func (o *TKey) ProjectDir() string {
-	idx := len(o.segments)-1-o.level
+	idx := len(o.segments) - 1 - o.level
 	if idx < 1 {
 		return ""
 	}
@@ -301,4 +316,3 @@ func tryToFindKey(path string, name string) (*TKey, error) {
 		return nil, fmt.Errorf("tryToFindKey(): <key> not found %v", key)
 	}
 }
-
