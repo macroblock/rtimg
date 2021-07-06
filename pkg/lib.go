@@ -42,6 +42,12 @@ var cannotBeProjectName = []string{
 	"./для сервиса/",
 }
 
+/*
+var doOffsetForProjectName = []*regexp.Regexp {
+	regexp.MustCompile(`^\d+ сезон$`),
+}
+*/
+
 var postersTable = map[string]TKeyData{
 	"./350x500.jpg":  {"rt", 1 * mb},
 	"./350x500.psd":  {"rt", none},
