@@ -308,7 +308,6 @@ func pathFromTagname(tn ITagname) (string, error) {
 }
 
 func tryToFindKey(path string, name string) (*TKey, error) {
-	fmt.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
 	key, err := newKey(path, name)
 	if err != nil {
 		return nil, err
