@@ -43,7 +43,7 @@ var cannotBeProjectName = []string{
 }
 
 var doOffsetForProjectName = []*regexp.Regexp{
-	regexp.MustCompile(`^\d+ сезон$`),
+	regexp.MustCompile(`^(.*/)?\d+ сезон$`),
 }
 
 var postersTable = map[string]TKeyData{
@@ -173,6 +173,7 @@ func FindKey(path string, tn ITagname) (*TKey, error) {
 			return nil, fmt.Errorf("findKey: %v", err)
 		}
 	}
+	key = doOffsetForProjectNameIfNeeded(key)
 	return key, nil
 }
 
@@ -230,20 +231,7 @@ func (o *TKey) Name() string {
 }
 
 func (o *TKey) Data() *TKeyData {
-	hash := o.Hash()
-	fmt.Printf("hash: %v\n", hash)
-	/*
-		path := strings.TrimPrefix(hash, "./")
-
-		for _, prefix := range cannotBeProjectName {
-			h := prefix + path
-			if _, ok := postersTable[h]; ok {
-				return nil
-			}
-		}
-	*/
-
-	if ret, ok := postersTable[hash]; ok {
+	if ret, ok := postersTable[o.Hash()]; ok {
 		return &ret
 	}
 
@@ -307,19 +295,52 @@ func pathFromTagname(tn ITagname) (string, error) {
 	return ret, nil
 }
 
+func doOffsetForProjectNameIfNeeded(key *TKey) *TKey {
+	projectDir := key.ProjectDir()
+	for _, re := range doOffsetForProjectName {
+		if re.MatchString(projectDir) {
+			key.level++
+		}
+	}
+	return key
+}
+
+func isDeclined(key *TKey) bool {
+	path := strings.TrimPrefix(key.Hash(), "./")
+	for _, prefix := range cannotBeProjectName {
+		hash := prefix + path
+		if _, ok := postersTable[hash]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 func tryToFindKey(path string, name string) (*TKey, error) {
 	key, err := newKey(path, name)
 	if err != nil {
 		return nil, err
 	}
+	var declinedKey *TKey
 	for {
-		fmt.Printf("debug: %v, %v\n", key.Hash(), key.Data())
-		if key.Data() != nil {
+		declined := isDeclined(key)
+		if declined {
+			if declinedKey == nil {
+				declinedKey = &TKey{}
+			}
+			*declinedKey = *key
+		}
+
+		if key.Data() != nil && !declined {
 			return key, nil
 		}
-		if key.NextLevel() {
-			continue
+
+		if !key.NextLevel() {
+			break
 		}
-		return nil, fmt.Errorf("tryToFindKey(): <key> not found %v", key)
 	}
+	if declinedKey != nil {
+		return declinedKey, nil
+	}
+	return nil, fmt.Errorf("tryToFindKey(): <key> not found %v", key)
 }
