@@ -1,6 +1,7 @@
 package main
 
 import (
+	// "fmt"
 	"strings"
 	"testing"
 
@@ -72,12 +73,13 @@ func TestIncorrect(t *testing.T) {
 
 func testEntry(t *testing.T, projectDir, projectLeaf string) {
 	path := projectDir + projectLeaf
+	// fmt.Printf("+++ %v\n", path)
 	x := strings.Split(projectDir, "/")
 	projectName := x[len(x)-1]
 	// key := newKey(path, "")
 	key, err := rtimg.FindKey(path, nil)
 	if err != nil {
-		t.Errorf("TestKey: %v", err)
+		t.Errorf("TestKey: %q, %v", path, err)
 		return
 	}
 	s := key.ProjectDir()
@@ -87,8 +89,13 @@ func testEntry(t *testing.T, projectDir, projectLeaf string) {
 	}
 
 	hash := key.Hash()
-	if hash != "."+projectLeaf {
-		t.Errorf("TestKey: invalid hash %v", hash)
+	h := "."
+	if !strings.HasPrefix(projectLeaf, "/") {
+		h += "/"
+	}
+	h += projectLeaf
+	if hash != h {
+		t.Errorf("TestKey: invalid hash %v != %v", h, hash)
 	}
 	name := key.Name()
 	if name != projectName {
@@ -99,16 +106,46 @@ func testEntry(t *testing.T, projectDir, projectLeaf string) {
 //TestKey -
 func TestKey(t *testing.T) {
 	projectDir := "some/path/PROJECT_NAME"
-	projectLeaf := "/google_apple_feed/jpg/g_iconic_poster_600x800.jpg"
+	projectLeaf := "/350x500.jpg"
+	testEntry(t, projectDir, projectLeaf)
+
+	projectDir = ""
+	projectLeaf = "/350x500.jpg"
+	testEntry(t, projectDir, projectLeaf)
+
+	projectDir = ""
+	projectLeaf = "350x500.jpg"
+	testEntry(t, projectDir, projectLeaf)
+
+	projectDir = "some/path/PROJECT_NAME"
+	projectLeaf = "/600x600.jpg"
+	testEntry(t, projectDir, projectLeaf)
+
+	projectDir = "some/path/PROJECT_NAME"
+	projectLeaf = "/google_apple_feed/jpg/g_iconic_poster_600x800.jpg"
 	testEntry(t, projectDir, projectLeaf)
 
 	projectDir = "some/path/PROJECT_NAME"
 	projectLeaf = "/для сервиса/600x600.jpg"
 	testEntry(t, projectDir, projectLeaf)
 
-	/*
-		projectDir = "some/path/PROJECT_NAME"
-		projectLeaf = "/1 сезон/600x600.jpg"
-		testEntry(t, projectDir, projectLeaf)
-	*/
+	projectDir = "some/path/PROJECT_NAME"
+	projectLeaf = "/1 сезон/600x600.jpg"
+	testEntry(t, projectDir, projectLeaf)
+
+	projectDir = "some/path/PROJECT_NAME"
+	projectLeaf = "/1 сезон/для сервиса/600x600.jpg"
+	testEntry(t, projectDir, projectLeaf)
+
+	projectDir = ""
+	projectLeaf = "/1 сезон/для сервиса/600x600.jpg"
+	testEntry(t, projectDir, projectLeaf)
+
+	projectDir = ""
+	projectLeaf = "1 сезон/для сервиса/600x600.jpg"
+	testEntry(t, projectDir, projectLeaf)
+
+	projectDir = "для сервиса"
+	projectLeaf = "/1 сезон/600x600.jpg"
+	testEntry(t, projectDir, projectLeaf)
 }

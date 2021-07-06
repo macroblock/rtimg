@@ -42,11 +42,9 @@ var cannotBeProjectName = []string{
 	"./для сервиса/",
 }
 
-/*
-var doOffsetForProjectName = []*regexp.Regexp {
+var doOffsetForProjectName = []*regexp.Regexp{
 	regexp.MustCompile(`^\d+ сезон$`),
 }
-*/
 
 var postersTable = map[string]TKeyData{
 	"./350x500.jpg":  {"rt", 1 * mb},
@@ -233,14 +231,17 @@ func (o *TKey) Name() string {
 
 func (o *TKey) Data() *TKeyData {
 	hash := o.Hash()
-	path := strings.TrimPrefix(hash, "./")
+	fmt.Printf("hash: %v\n", hash)
+	/*
+		path := strings.TrimPrefix(hash, "./")
 
-	for _, prefix := range cannotBeProjectName {
-		h := prefix + path
-		if _, ok := postersTable[h]; ok {
-			return nil
+		for _, prefix := range cannotBeProjectName {
+			h := prefix + path
+			if _, ok := postersTable[h]; ok {
+				return nil
+			}
 		}
-	}
+	*/
 
 	if ret, ok := postersTable[hash]; ok {
 		return &ret
@@ -307,12 +308,13 @@ func pathFromTagname(tn ITagname) (string, error) {
 }
 
 func tryToFindKey(path string, name string) (*TKey, error) {
+	fmt.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
 	key, err := newKey(path, name)
 	if err != nil {
 		return nil, err
 	}
 	for {
-		// fmt.Printf("debug: %v, %v\n", key.Hash(), key.Data())
+		fmt.Printf("debug: %v, %v\n", key.Hash(), key.Data())
 		if key.Data() != nil {
 			return key, nil
 		}
