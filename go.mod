@@ -3,6 +3,7 @@ module github.com/macroblock/rtimg
 go 1.15
 
 replace github.com/macroblock/imed => ../../macroblock/imed
+replace golang.com/x/ => ../../golang.com/x/
 
 require (
 	github.com/atotto/clipboard v0.1.4
