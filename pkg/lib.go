@@ -22,6 +22,7 @@ type (
 		// index starting from last segment
 		level    int
 		segments []string
+		data     *TKeyData
 	}
 	TKeyData struct {
 		Type          string
@@ -46,7 +47,7 @@ var doOffsetForProjectName = []*regexp.Regexp{
 	regexp.MustCompile(`^(.*/)?\d+ сезон$`),
 }
 
-var postersTable = map[string]TKeyData{
+var postersTable = map[string]*TKeyData{
 	"./350x500.jpg":  {"rt", 1 * mb},
 	"./350x500.psd":  {"rt", none},
 	"./525x300.jpg":  {"rt", 1 * mb},
@@ -121,7 +122,7 @@ var reSize = regexp.MustCompile(`^(?:.*_)?(?:(\d+x\d+)|(logo))[\._].*$`)
 
 func init() {
 	// gather valid extensions
-	for v, _ := range postersTable {
+	for v := range postersTable {
 		ext := filepath.Ext(v)
 		validExtension[ext] = true
 	}
@@ -231,11 +232,14 @@ func (o *TKey) Name() string {
 }
 
 func (o *TKey) Data() *TKeyData {
-	if ret, ok := postersTable[o.Hash()]; ok {
-		return &ret
-	}
+	return o.data
+	/*
+		if ret, ok := postersTable[o.Hash()]; ok {
+			return &ret
+		}
 
-	return nil
+		return nil
+	*/
 }
 
 func (o *TKey) Size() string {
@@ -323,9 +327,11 @@ func tryToFindKey(path string, name string) (*TKey, error) {
 	}
 	var declinedKey *TKey
 	for do := true; do; do = key.NextLevel() {
-		if key.Data() == nil {
+		data, ok := postersTable[key.Hash()]
+		if !ok {
 			continue
 		}
+		key.data = data
 
 		if isDeclined(key) {
 			if declinedKey == nil {

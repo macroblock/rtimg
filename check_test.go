@@ -1,7 +1,6 @@
 package main
 
 import (
-	// "fmt"
 	"strings"
 	"testing"
 
@@ -73,7 +72,7 @@ func TestIncorrect(t *testing.T) {
 
 func testEntry(t *testing.T, projectDir, projectLeaf string) {
 	path := projectDir + projectLeaf
-	// fmt.Printf("+++ %v\n", path)
+	t.Logf("--- input: %q\n", path)
 	x := strings.Split(projectDir, "/")
 	projectName := x[len(x)-1]
 	// key := newKey(path, "")
@@ -100,6 +99,10 @@ func testEntry(t *testing.T, projectDir, projectLeaf string) {
 	name := key.Name()
 	if name != projectName {
 		t.Errorf("TestKey: invalid name %v", name)
+	}
+
+	if key.Data() == nil {
+		t.Errorf("TestKey: Data() is nil")
 	}
 }
 
