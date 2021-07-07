@@ -62,6 +62,7 @@ var postersTable = map[string]TKeyData{
 	"./logo.png":     {"rt", 1 * mb},
 	"./logo.psd":     {"rt", none},
 
+	// GP
 	"./600x600.jpg":          {"gp", 700 * kb},
 	"./600x600.psd":          {"gp", none},
 	"./600x840.jpg":          {"gp", 700 * kb},
@@ -85,7 +86,6 @@ var postersTable = map[string]TKeyData{
 	"./1104x624.psd":  {"gp", none},
 	"./3840x1344.png": {"gp", 6 * mb},
 	"./3840x1344.psd": {"gp", none},
-
 	// viasat
 	"./для сервиса/600x600.jpg":   {"gp", 3 * mb},
 	"./для сервиса/600x600.psd":   {"gp", none},
@@ -95,7 +95,7 @@ var postersTable = map[string]TKeyData{
 	"./для сервиса/1920x1080.psd": {"gp", none},
 	"./для сервиса/1760x557.jpg":  {"gp", 3 * mb},
 	"./для сервиса/1760x557.psd":  {"gp", none},
-
+	// --
 	"./google_apple_feed/jpg/g_hasLogo_600x600.png":         {"gp", none},
 	"./google_apple_feed/psd/g_hasLogo_600x600.psd":         {"gp", none},
 	"./google_apple_feed/jpg/g_hasTitle_logo_1800x1000.png": {"gp", none},
@@ -322,25 +322,24 @@ func tryToFindKey(path string, name string) (*TKey, error) {
 		return nil, err
 	}
 	var declinedKey *TKey
-	for {
-		declined := isDeclined(key)
-		if declined {
+	for do := true; do; do = key.NextLevel() {
+		if key.Data() == nil {
+			continue
+		}
+
+		if isDeclined(key) {
 			if declinedKey == nil {
 				declinedKey = &TKey{}
 			}
 			*declinedKey = *key
-		}
-
-		if key.Data() != nil && !declined {
+		} else {
 			return key, nil
 		}
-
-		if !key.NextLevel() {
-			break
-		}
 	}
+
 	if declinedKey != nil {
 		return declinedKey, nil
 	}
+
 	return nil, fmt.Errorf("tryToFindKey(): <key> not found %v", key)
 }
