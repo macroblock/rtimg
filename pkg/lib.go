@@ -58,8 +58,10 @@ var postersTable = map[string]*TKeyData{
 	"./270x390.psd":  {"rt", none},
 	"./1620x996.jpg": {"rt", 900 * kb},
 	"./1620x996.psd": {"rt", none},
-	"./503x726.jpg":  {"rt", 900 * kb},
-	"./503x726.psd":  {"rt", none},
+	// "./503x726.jpg":  {"rt", 900 * kb},
+	// "./503x726.psd":  {"rt", none},
+	"./1006x1452.jpg":  {"rt", 900 * kb},
+	"./1006x1452.psd":  {"rt", none},
 	"./logo.png":     {"rt", 900 * kb},
 	"./logo.psd":     {"rt", none},
 
